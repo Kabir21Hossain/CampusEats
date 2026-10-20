@@ -1,0 +1,114 @@
+[
+  {
+    "id": "order-1001",
+    "orderNumber": "CE-981240",
+    "studentId": "student-1",
+    "customerName": "Nafis Fuad",
+    "customerEmail": "nafis.fuad@du.ac.bd",
+    "shopId": "shop-1",
+    "shopName": "Campus Grill & Cafe",
+    "shopOwnerId": "owner-1",
+    "items": [
+      {
+        "id": "item-101",
+        "name": "Classic TSC Smash Burger",
+        "price": 180,
+        "quantity": 2,
+        "subtotal": 360
+      },
+      {
+        "id": "item-103",
+        "name": "Peri Peri French Fries",
+        "price": 80,
+        "quantity": 1,
+        "subtotal": 80
+      }
+    ],
+    "subtotal": 440,
+    "deliveryFee": 20,
+    "platformFee": 5,
+    "total": 465,
+    "status": "ready_for_pickup",
+    "riderId": null,
+    "riderName": null,
+    "deliveryLocation": "Shahidullah Hall, Room 314",
+    "deliveryNotes": "Call when entering main gate",
+    "paymentMethod": "bkash",
+    "paymentStatus": "paid",
+    "escrowStatus": "held",
+    "pickupOtp": "4921",
+    "deliveryCode": "DEL892",
+    "createdAt": "2026-03-10T12:30:00.000Z",
+    "updatedAt": "2026-03-10T12:45:00.000Z"
+  },
+  {
+    "id": "order-1002",
+    "orderNumber": "CE-981241",
+    "studentId": "student-2",
+    "customerName": "Sadia Islam",
+    "customerEmail": "sadia.islam@du.ac.bd",
+    "shopId": "shop-2",
+    "shopName": "Khan's Shahi Biryani",
+    "shopOwnerId": "owner-2",
+    "items": [
+      {
+        "id": "item-201",
+        "name": "Special Mutton Kacchi Biryani",
+        "price": 280,
+        "quantity": 1,
+        "subtotal": 280
+      }
+    ],
+    "subtotal": 280,
+    "deliveryFee": 20,
+    "platformFee": 5,
+    "total": 305,
+    "status": "in_transit",
+    "riderId": "rider-1",
+    "riderName": "Tariqul Hasan",
+    "deliveryLocation": "Rokeya Hall, Main Gate",
+    "deliveryNotes": "Wait at security booth",
+    "paymentMethod": "nagad",
+    "paymentStatus": "paid",
+    "escrowStatus": "held",
+    "pickupOtp": "7834",
+    "deliveryCode": "DEL341",
+    "createdAt": "2026-03-10T13:00:00.000Z",
+    "updatedAt": "2026-03-10T13:20:00.000Z"
+  },
+  {
+    "id": "order-1003",
+    "orderNumber": "CE-981239",
+    "studentId": "student-1",
+    "customerName": "Nafis Fuad",
+    "customerEmail": "nafis.fuad@du.ac.bd",
+    "shopId": "shop-3",
+    "shopName": "Green Leaf Healthy Bowls",
+    "shopOwnerId": "owner-1",
+    "items": [
+      {
+        "id": "item-301",
+        "name": "Grilled Teriyaki Chicken Bowl",
+        "price": 210,
+        "quantity": 1,
+        "subtotal": 210
+      }
+    ],
+    "subtotal": 210,
+    "deliveryFee": 20,
+    "platformFee": 5,
+    "total": 235,
+    "status": "delivered",
+    "riderId": "rider-2",
+    "riderName": "Mehedi Hasan",
+    "deliveryLocation": "Curzon Hall Science Library",
+    "deliveryNotes": "Delivered to reception",
+    "paymentMethod": "bkash",
+    "paymentStatus": "paid",
+    "escrowStatus": "released_to_merchant_and_rider",
+    "pickupOtp": "1122",
+    "deliveryCode": "DEL778",
+    "createdAt": "2026-03-09T14:00:00.000Z",
+    "updatedAt": "2026-03-09T14:40:00.000Z"
+  }
+]

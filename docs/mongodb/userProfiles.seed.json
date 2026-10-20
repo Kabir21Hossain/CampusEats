@@ -1,0 +1,86 @@
+[
+  {
+    "id": "student-1",
+    "name": "Nafis Fuad",
+    "email": "nafis.fuad@du.ac.bd",
+    "role": "student",
+    "studentId": "2021-CS-042",
+    "department": "Computer Science & Engineering",
+    "hall": "Shahidullah Hall",
+    "phone": "+8801711000001",
+    "isApproved": true,
+    "isSuspended": false,
+    "createdAt": "2026-01-15T08:00:00.000Z"
+  },
+  {
+    "id": "student-2",
+    "name": "Sadia Islam",
+    "email": "sadia.islam@du.ac.bd",
+    "role": "student",
+    "studentId": "2022-ECO-108",
+    "department": "Economics",
+    "hall": "Rokeya Hall",
+    "phone": "+8801711000002",
+    "isApproved": true,
+    "isSuspended": false,
+    "createdAt": "2026-02-01T09:30:00.000Z"
+  },
+  {
+    "id": "owner-1",
+    "name": "Rafiqul Islam",
+    "email": "rafiq.grill@du.ac.bd",
+    "role": "shop_owner",
+    "phone": "+8801711000003",
+    "isApproved": true,
+    "isSuspended": false,
+    "shopId": "shop-1",
+    "createdAt": "2026-01-01T10:00:00.000Z"
+  },
+  {
+    "id": "owner-2",
+    "name": "Al-Haj Delwar Khan",
+    "email": "delwar.biryani@du.ac.bd",
+    "role": "shop_owner",
+    "phone": "+8801711000004",
+    "isApproved": true,
+    "isSuspended": false,
+    "shopId": "shop-2",
+    "createdAt": "2026-01-05T11:00:00.000Z"
+  },
+  {
+    "id": "rider-1",
+    "name": "Tariqul Hasan",
+    "email": "tariq.rider@du.ac.bd",
+    "role": "rider",
+    "studentId": "2020-MATH-077",
+    "department": "Mathematics",
+    "hall": "Fazlul Huq Muslim Hall",
+    "phone": "+8801711000005",
+    "isApproved": true,
+    "isSuspended": false,
+    "createdAt": "2026-01-10T12:00:00.000Z"
+  },
+  {
+    "id": "rider-2",
+    "name": "Mehedi Hasan",
+    "email": "mehedi.rider@du.ac.bd",
+    "role": "rider",
+    "studentId": "2021-STAT-019",
+    "department": "Statistics",
+    "hall": "Jagannath Hall",
+    "phone": "+8801711000006",
+    "isApproved": true,
+    "isSuspended": false,
+    "createdAt": "2026-01-12T13:00:00.000Z"
+  },
+  {
+    "id": "admin-1",
+    "name": "Campus Moderator",
+    "email": "admin@campuseats.edu.bd",
+    "role": "admin",
+    "phone": "+8801711000099",
+    "isApproved": true,
+    "isSuspended": false,
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+]

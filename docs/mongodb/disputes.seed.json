@@ -1,0 +1,11 @@
+[
+  {
+    "id": "disp-1",
+    "orderId": "order-1002",
+    "initiatorUserId": "student-2",
+    "reason": "Missing condiment and delayed delivery",
+    "status": "under_review",
+    "escrowState": "frozen",
+    "createdAt": "2026-03-10T14:00:00.000Z"
+  }
+]

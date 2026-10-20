@@ -1,0 +1,13 @@
+[
+  {
+    "id": "rate-1",
+    "orderId": "order-1003",
+    "studentId": "student-1",
+    "shopId": "shop-3",
+    "riderId": "rider-2",
+    "shopRating": 5,
+    "riderRating": 5,
+    "review": "Fast delivery right to the library stairs! Fresh and hot bowl.",
+    "createdAt": "2026-03-09T15:00:00.000Z"
+  }
+]

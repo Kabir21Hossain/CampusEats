@@ -1,0 +1,26 @@
+[
+  {
+    "id": "rider-prof-1",
+    "userId": "rider-1",
+    "fullName": "Tariqul Hasan",
+    "vehicleType": "Bicycle",
+    "hall": "Fazlul Huq Muslim Hall",
+    "currentCampusZone": "Curzon Hall Area",
+    "isActive": true,
+    "rating": 4.9,
+    "completedDeliveries": 128,
+    "totalEarningsBDT": 3840
+  },
+  {
+    "id": "rider-prof-2",
+    "userId": "rider-2",
+    "fullName": "Mehedi Hasan",
+    "vehicleType": "Walking / On-Foot",
+    "hall": "Jagannath Hall",
+    "currentCampusZone": "Arts Faculty & TSC",
+    "isActive": true,
+    "rating": 4.8,
+    "completedDeliveries": 94,
+    "totalEarningsBDT": 2820
+  }
+]

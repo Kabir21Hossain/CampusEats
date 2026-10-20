@@ -1,0 +1,1 @@
+export { shopService } from "./index";

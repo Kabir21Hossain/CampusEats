@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "CampusEats Seed Manifest",
+  "description": "Standardized non-destructive seed dataset for local and staging environments",
+  "allowInProduction": false,
+  "collections": [
+    {
+      "name": "users",
+      "file": "userProfiles.seed.json",
+      "keyField": "id",
+      "description": "Demo profiles for student, shop owner, rider, and admin"
+    },
+    {
+      "name": "shops",
+      "file": "shops.seed.json",
+      "keyField": "id",
+      "description": "Campus restaurants and food stalls"
+    },
+    {
+      "name": "menuItems",
+      "file": "menuItems.seed.json",
+      "keyField": "id",
+      "description": "Food menu items associated with shops"
+    },
+    {
+      "name": "riderProfiles",
+      "file": "riderProfiles.seed.json",
+      "keyField": "id",
+      "description": "Rider delivery vehicle and active status records"
+    },
+    {
+      "name": "orders",
+      "file": "orders.seed.json",
+      "keyField": "id",
+      "description": "Sample orders in various lifecycle stages"
+    },
+    {
+      "name": "notifications",
+      "file": "notifications.seed.json",
+      "keyField": "id",
+      "description": "Sample in-app notifications"
+    },
+    {
+      "name": "ratings",
+      "file": "ratings.seed.json",
+      "keyField": "id",
+      "description": "Sample user reviews and ratings"
+    },
+    {
+      "name": "disputes",
+      "file": "disputes.seed.json",
+      "keyField": "id",
+      "description": "Sample escrow disputes"
+    }
+  ]
+}

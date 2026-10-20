@@ -1,0 +1,68 @@
+[
+  {
+    "id": "item-101",
+    "shopId": "shop-1",
+    "name": "Classic TSC Smash Burger",
+    "description": "Double beef patty, melted cheddar, caramelized onions, house burger sauce on brioche.",
+    "price": 180,
+    "category": "Burgers",
+    "isAvailable": true,
+    "prepTimeMinutes": 12,
+    "imageUrl": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    "id": "item-102",
+    "shopId": "shop-1",
+    "name": "Crispy Naga Chicken Burger",
+    "description": "Extra spicy fried chicken thigh dipped in fiery Sylheti Naga chili glaze with creamy slaw.",
+    "price": 160,
+    "category": "Burgers",
+    "isAvailable": true,
+    "prepTimeMinutes": 15,
+    "imageUrl": "https://images.unsplash.com/photo-1625813506062-0aeb1d7a094b?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    "id": "item-103",
+    "shopId": "shop-1",
+    "name": "Peri Peri French Fries",
+    "description": "Golden crinkle-cut fries generously dusted with spicy tangy peri-peri seasoning.",
+    "price": 80,
+    "category": "Sides",
+    "isAvailable": true,
+    "prepTimeMinutes": 8,
+    "imageUrl": "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    "id": "item-201",
+    "shopId": "shop-2",
+    "name": "Special Mutton Kacchi Biryani",
+    "description": "Slow-cooked tender mutton shank with spiced basmati rice, saffron, aloo, and boiled egg.",
+    "price": 280,
+    "category": "Biryani",
+    "isAvailable": true,
+    "prepTimeMinutes": 10,
+    "imageUrl": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    "id": "item-202",
+    "shopId": "shop-2",
+    "name": "Old Dhaka Morog Polao",
+    "description": "Aromatic Chinigura rice cooked in ghee with whole chicken quarter and borhani.",
+    "price": 220,
+    "category": "Biryani",
+    "isAvailable": true,
+    "prepTimeMinutes": 10,
+    "imageUrl": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    "id": "item-301",
+    "shopId": "shop-3",
+    "name": "Grilled Teriyaki Chicken Bowl",
+    "description": "Brown rice, grilled chicken breast, edamame, roasted broccoli, sesame, and teriyaki glaze.",
+    "price": 210,
+    "category": "Bowls",
+    "isAvailable": true,
+    "prepTimeMinutes": 12,
+    "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80"
+  }
+]
