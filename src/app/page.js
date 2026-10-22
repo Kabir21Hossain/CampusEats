@@ -333,7 +333,7 @@ export default function LandingPage() {
                     Order from all campus halls and canteens. Track your delivery rider on the campus map and verify handovers securely via QR code.
                   </p>
                 </div>
-                <Link href="/register/student">
+                <Link href="/signup?role=student">
                   <Button variant="secondary" size="md" className="w-full">
                     Register as Student <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -353,7 +353,7 @@ export default function LandingPage() {
                     Expand canteen revenue into every dormitory. Manage live incoming orders, menu stock, and automated 85% escrow payouts.
                   </p>
                 </div>
-                <Link href="/register/shop-owner">
+                <Link href="/signup?role=shop_owner">
                   <Button variant="secondary" size="md" className="w-full">
                     Apply as Shop Partner <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -373,7 +373,7 @@ export default function LandingPage() {
                     Earn 12% on every delivery on your bicycle or walking between classes. Flexible schedule, instant wallet credits, and campus tips.
                   </p>
                 </div>
-                <Link href="/register/rider">
+                <Link href="/signup?role=rider">
                   <Button variant="secondary" size="md" className="w-full">
                     Deliver &amp; Earn <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -402,7 +402,7 @@ export default function LandingPage() {
                     Start Ordering Food
                   </Button>
                 </Link>
-                <Link href="/register">
+                <Link href="/signup">
                   <Button variant="outline" size="lg" className="border-emerald-600 text-white bg-transparent hover:bg-emerald-800">
                     Create an Account
                   </Button>

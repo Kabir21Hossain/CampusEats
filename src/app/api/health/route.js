@@ -1,34 +1,27 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { checkMongoConnection } from "@/lib/db";
 
 /**
  * Safe health-check endpoint.
  * Reports service readiness and database connectivity
- * without exposing secrets, URIs, stack traces, or topology.
+ * without exposing secrets, passwords, URIs, or stack traces.
  */
 export async function GET() {
+  const dbHealth = await checkMongoConnection();
+
   const health = {
-    status: "ok",
+    status: dbHealth.connected ? "ok" : "degraded",
     service: "campuseats",
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: { connected: false },
+    uptime: Math.floor(process.uptime()),
+    database: {
+      connected: dbHealth.connected,
+      name: dbHealth.database,
+      collectionsCount: dbHealth.collections?.length ?? 0,
+      ping: dbHealth.ping ? "ok" : "failed",
+    },
   };
 
-  try {
-    const db = await getDb();
-    if (db) {
-      // If real MongoDB, try a ping
-      if (typeof db.command === "function") {
-        await db.command({ ping: 1 });
-      }
-      health.database.connected = true;
-    }
-  } catch {
-    health.database.connected = false;
-    health.status = "degraded";
-  }
-
-  const statusCode = health.status === "ok" ? 200 : 503;
+  const statusCode = dbHealth.connected ? 200 : 503;
   return NextResponse.json(health, { status: statusCode });
 }

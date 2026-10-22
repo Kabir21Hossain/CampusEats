@@ -1,36 +1,24 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { INITIAL_USERS, INITIAL_NOTIFICATIONS } from "@/services/mock/mock-data";
-import { ROLES } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { authClient, useSession, getSession } from "@/lib/auth-client";
+import { ROLES } from "@/lib/constants";
+import { INITIAL_NOTIFICATIONS } from "@/services/mock/mock-data";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState(INITIAL_USERS[0]); // Default to student
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const [mounted, setMounted] = useState(false);
+  const { data: sessionData, isPending, error: sessionError, refetch } = useSession();
 
-  // Sync session on mount
+  const [mounted, setMounted] = useState(false);
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+
   useEffect(() => {
     setMounted(true);
     try {
-      const savedUser = localStorage.getItem("campuseats_active_user");
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-        // Ensure cookies match
-        document.cookie = `campuseats_role=${parsed.role}; path=/; max-age=604800`;
-        document.cookie = `campuseats_user_id=${parsed.id}; path=/; max-age=604800`;
-      } else {
-        // Set default student cookies
-        document.cookie = `campuseats_role=student; path=/; max-age=604800`;
-        document.cookie = `campuseats_user_id=student-1; path=/; max-age=604800`;
-      }
-
       const savedNotifs = localStorage.getItem("campuseats_notifications");
       if (savedNotifs) {
         setNotifications(JSON.parse(savedNotifs));
@@ -40,129 +28,94 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const switchRole = (newRole) => {
-    let targetUser = null;
-    if (newRole === ROLES.STUDENT) {
-      targetUser = INITIAL_USERS.find((u) => u.role === ROLES.STUDENT);
-    } else if (newRole === ROLES.SHOP_OWNER) {
-      targetUser = INITIAL_USERS.find((u) => u.role === ROLES.SHOP_OWNER);
-    } else if (newRole === ROLES.RIDER) {
-      targetUser = INITIAL_USERS.find((u) => u.role === ROLES.RIDER);
-    } else if (newRole === ROLES.ADMIN) {
-      targetUser = INITIAL_USERS.find((u) => u.role === ROLES.ADMIN);
-    } else {
-      targetUser = null; // visitor
-    }
+  // Compute active user and authoritative role from Better Auth session
+  const currentUser = sessionData?.user || null;
+  const activeRole = currentUser?.role || "visitor";
+  const isAuthenticated = Boolean(currentUser);
 
-    setCurrentUser(targetUser);
+  /**
+   * Helper to redirect user to their assigned role portal
+   */
+  const routeToRolePage = (role) => {
+    if (role === ROLES.STUDENT) router.push("/student/home");
+    else if (role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
+    else if (role === ROLES.RIDER) router.push("/rider/available-orders");
+    else if (role === ROLES.ADMIN) router.push("/admin/dashboard");
+    else router.push("/signin");
+  };
 
-    if (targetUser) {
-      localStorage.setItem("campuseats_active_user", JSON.stringify(targetUser));
-      document.cookie = `campuseats_role=${targetUser.role}; path=/; max-age=604800`;
-      document.cookie = `campuseats_user_id=${targetUser.id}; path=/; max-age=604800`;
-      toast.success(`Active Perspective: ${targetUser.name} (${targetUser.role.toUpperCase()})`);
+  /**
+   * Authenticate with Better Auth using email and password
+   */
+  const login = async ({ email, password }) => {
+    try {
+      const { data, error } = await authClient.signIn.email({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-      // Route to their respective portal
-      if (targetUser.role === ROLES.STUDENT) router.push("/student/home");
-      else if (targetUser.role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
-      else if (targetUser.role === ROLES.RIDER) router.push("/rider/available-orders");
-      else if (targetUser.role === ROLES.ADMIN) router.push("/admin/dashboard");
-    } else {
-      localStorage.removeItem("campuseats_active_user");
-      document.cookie = "campuseats_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "campuseats_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      toast.info("Signed out / Visitor mode");
+      if (error) {
+        toast.error(error.message || "Invalid credentials. Please try again.");
+        return { success: false, error: error.message };
+      }
+
+      // Check authoritative session using getSession
+      const freshSession = await getSession();
+      const user = freshSession?.data?.user || data?.user;
+
+      toast.success(`Welcome back, ${user?.name || "User"}!`);
+      await refetch();
       router.push("/");
-    }
-  };
-
-  const login = async (roleOrCredentials) => {
-    let role = ROLES.STUDENT;
-    let email = null;
-    let password = null;
-
-    if (typeof roleOrCredentials === "string") {
-      role = roleOrCredentials;
-    } else if (roleOrCredentials && typeof roleOrCredentials === "object") {
-      email = roleOrCredentials.email;
-      password = roleOrCredentials.password;
-    }
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email || `${role}@campuseats.com`, password: password || "123456" }),
-      });
-      const data = await res.json();
-
-      if (data.success && data.data) {
-        const user = data.data;
-        setCurrentUser(user);
-        localStorage.setItem("campuseats_active_user", JSON.stringify(user));
-        document.cookie = `campuseats_role=${user.role}; path=/; max-age=604800`;
-        document.cookie = `campuseats_user_id=${user.id}; path=/; max-age=604800`;
-        toast.success(`Welcome back, ${user.name}!`);
-
-        if (user.role === ROLES.STUDENT) router.push("/student/home");
-        else if (user.role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
-        else if (user.role === ROLES.RIDER) router.push("/rider/available-orders");
-        else if (user.role === ROLES.ADMIN) router.push("/admin/dashboard");
-        return { success: true, user };
-      } else {
-        toast.error(data.error || "Authentication failed");
-        return { success: false, error: data.error };
-      }
-    } catch {
-      // Fallback to local user
-      const user = INITIAL_USERS.find((u) => u.role === role) || INITIAL_USERS[0];
-      setCurrentUser(user);
-      localStorage.setItem("campuseats_active_user", JSON.stringify(user));
-      document.cookie = `campuseats_role=${user.role}; path=/; max-age=604800`;
-      document.cookie = `campuseats_user_id=${user.id}; path=/; max-age=604800`;
-      toast.success(`Signed in as ${user.name}`);
-      if (user.role === ROLES.STUDENT) router.push("/student/home");
-      else if (user.role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
-      else if (user.role === ROLES.RIDER) router.push("/rider/available-orders");
-      else if (user.role === ROLES.ADMIN) router.push("/admin/dashboard");
       return { success: true, user };
-    }
-  };
-
-  const registerUser = async (registrationData) => {
-    try {
-      const res = await fetch("/api/auth/register-role", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registrationData),
-      });
-      const data = await res.json();
-
-      if (data.success && data.data) {
-        const user = data.data;
-        setCurrentUser(user);
-        localStorage.setItem("campuseats_active_user", JSON.stringify(user));
-        document.cookie = `campuseats_role=${user.role}; path=/; max-age=604800`;
-        document.cookie = `campuseats_user_id=${user.id}; path=/; max-age=604800`;
-        toast.success("Account registered successfully in MongoDB!");
-        return { success: true, user };
-      } else {
-        toast.error(data.error || "Registration failed");
-        return { success: false, error: data.error };
-      }
     } catch (err) {
-      toast.error(err.message || "Registration connection error");
+      toast.error(err.message || "Failed to sign in. Please verify your connection.");
       return { success: false, error: err.message };
     }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem("campuseats_active_user");
-    document.cookie = "campuseats_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "campuseats_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    toast.info("Signed out successfully");
-    router.push("/");
+  /**
+   * Register a new user with Better Auth and MongoDB persistence
+   */
+  const registerUser = async (registrationData) => {
+    try {
+      const { email, password, name, role = ROLES.STUDENT, ...additionalFields } =
+        registrationData;
+
+      const { data, error } = await authClient.signUp.email({
+        email: email.trim().toLowerCase(),
+        password,
+        name: name.trim(),
+        role,
+        ...additionalFields,
+      });
+
+      if (error) {
+        toast.error(error.message || "Registration failed. Please check form details.");
+        return { success: false, error: error.message };
+      }
+
+      toast.success("Account created successfully. Please sign in.");
+
+      return { success: true, user: data?.user };
+    } catch (err) {
+      toast.error(err.message || "Registration error");
+      return { success: false, error: err.message };
+    }
+  };
+
+  /**
+   * Logout: Invalidate server session via Better Auth and clear cookies
+   */
+  const logout = async () => {
+    try {
+      await authClient.signOut();
+      await refetch();
+      toast.info("Signed out successfully");
+      router.push("/signin");
+    } catch (err) {
+      toast.error("Sign out encountered an issue");
+      router.push("/signin");
+    }
   };
 
   const markNotificationRead = (notifId) => {
@@ -183,9 +136,14 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         currentUser,
-        role: currentUser?.role || "visitor",
-        isAuthenticated: !!currentUser,
-        switchRole,
+        role: activeRole,
+        isAuthenticated,
+        isPending,
+        session: sessionData?.session || null,
+        useSession,
+        getSession,
+        refetchSession: refetch,
+        routeToRolePage,
         login,
         registerUser,
         logout,

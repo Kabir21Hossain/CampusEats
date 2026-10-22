@@ -48,7 +48,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/register/student" className="hover:text-emerald-600 transition-colors">
+                <Link href="/signup?role=student" className="hover:text-emerald-600 transition-colors">
                   Student Registration
                 </Link>
               </li>
@@ -62,12 +62,12 @@ export function Footer() {
             </h5>
             <ul className="space-y-1.5 text-xs">
               <li>
-                <Link href="/register/shop-owner" className="hover:text-emerald-600 transition-colors">
+                <Link href="/signup?role=shop_owner" className="hover:text-emerald-600 transition-colors">
                   Apply as Food Shop Owner
                 </Link>
               </li>
               <li>
-                <Link href="/register/rider" className="hover:text-emerald-600 transition-colors">
+                <Link href="/signup?role=rider" className="hover:text-emerald-600 transition-colors">
                   Become a Student Rider
                 </Link>
               </li>

@@ -31,6 +31,7 @@ export function Navbar() {
   const { itemCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Dynamic Navigation according to active role
   const getNavLinks = () => {
@@ -70,13 +71,25 @@ export function Navbar() {
     }
     // Visitor / Public
     return [
-      { href: "/student/home", label: "Browse Shops" },
-      { href: "/register", label: "Join CampusEats" },
-      { href: "/login", label: "Sign In" },
+      { href: "/", label: "Browse Shops" },
+      { href: "/signup", label: "Join CampusEats" },
+      { href: "/signin", label: "Sign In" },
     ];
   };
 
   const navLinks = getNavLinks();
+  const dashboardHref = {
+    [ROLES.STUDENT]: "/student/home",
+    [ROLES.SHOP_OWNER]: "/shop-owner/dashboard",
+    [ROLES.RIDER]: "/rider/available-orders",
+    [ROLES.ADMIN]: "/admin/dashboard",
+  }[role];
+  const roleLabel = {
+    [ROLES.STUDENT]: "Student",
+    [ROLES.SHOP_OWNER]: "Shop Owner",
+    [ROLES.RIDER]: "Rider",
+    [ROLES.ADMIN]: "Admin",
+  }[role];
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/85 dark:bg-zinc-950/85 backdrop-blur-md transition-colors">
@@ -211,32 +224,57 @@ export function Navbar() {
 
           {/* User Profile / Auth State */}
           {currentUser ? (
-            <div className="flex items-center gap-2 pl-1">
-              <Link
-                href={
-                  role === ROLES.STUDENT
-                    ? "/student/profile"
-                    : role === ROLES.SHOP_OWNER
-                    ? "/shop-owner/settings"
-                    : role === ROLES.RIDER
-                    ? "/rider/profile"
-                    : "/admin/dashboard"
-                }
-                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs group"
+            <div className="relative pl-1">
+              <button
+                type="button"
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs"
+                aria-expanded={profileOpen}
+                aria-label="Open account menu"
               >
                 <img
                   src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"}
-                  alt={currentUser.name}
+                  alt=""
                   className="h-6 w-6 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
                 />
                 <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 hidden lg:inline max-w-[100px] truncate">
                   {currentUser.name.split(" ")[0]}
                 </span>
-              </Link>
+                <span className="sr-only">{roleLabel} account menu</span>
+              </button>
+              {profileOpen && (
+                <div className="absolute right-0 mt-2 w-52 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 z-50">
+                  <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {currentUser.name}
+                    </p>
+                    <p className="text-[11px] text-zinc-500">{roleLabel}</p>
+                  </div>
+                  {dashboardHref && (
+                    <Link
+                      href={dashboardHref}
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      Go to dashboard
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      logout();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <Link
-              href="/login"
+              href="/signin"
               className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors shadow-xs"
             >
               Sign In

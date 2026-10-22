@@ -1,63 +1,35 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { getCollection } from "@/lib/db";
-import { ROLES } from "@/lib/constants";
+import { NextResponse } from "next/server.js";
+import { auth } from "./auth.js";
+import { ROLES } from "./constants.js";
 
 /**
  * Validates the request session authoritatively using Better Auth & MongoDB.
- * Never uses unverified client tokens or decoded JWTs.
+ * Never trusts unverified client tokens, decoded JWTs, or client-supplied IDs.
  */
 export async function getServerSession(request) {
   try {
-    // 1. Try Better Auth authoritative session API
-    if (auth?.api?.getSession) {
-      try {
-        const session = await auth.api.getSession({
-          headers: request.headers,
-        });
-        if (session?.user) {
-          // Fetch full user record from database to verify suspension and role
-          const usersCol = await getCollection("users");
-          const dbUser = await usersCol.findOne({ id: session.user.id });
-          if (dbUser && !dbUser.isSuspended) {
-            return {
-              user: sanitizeUser(dbUser),
-              session: session.session,
-            };
-          }
-        }
-      } catch {
-        // Fall back to cookie-backed DB session check
-      }
+    let headers;
+    if (request && request.headers) {
+      headers = request.headers;
+    } else {
+      headers = new Headers();
     }
 
-    // 2. Authoritative cookie lookup against MongoDB
-    const userIdCookie = request.cookies.get("campuseats_user_id")?.value;
-    const roleCookie = request.cookies.get("campuseats_role")?.value;
+    const session = await auth.api.getSession({
+      headers,
+    });
 
-    if (!userIdCookie) {
+    if (!session || !session.user) {
       return null;
     }
 
-    const usersCol = await getCollection("users");
-    const user = await usersCol.findOne({ id: userIdCookie });
-
-    if (!user || user.isSuspended) {
-      return null;
-    }
-
-    // Enforce role consistency between cookie and DB record
-    if (roleCookie && user.role !== roleCookie) {
+    if (session.user.isSuspended) {
       return null;
     }
 
     return {
-      user: sanitizeUser(user),
-      session: {
-        id: `sess-${user.id}`,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
+      user: sanitizeUser(session.user),
+      session: session.session,
     };
   } catch (err) {
     console.error("[getServerSession Error]:", err.message);
@@ -68,24 +40,24 @@ export async function getServerSession(request) {
 /**
  * Strips sensitive fields like password hashes or internal secrets.
  */
-function sanitizeUser(user) {
+export function sanitizeUser(user) {
   if (!user) return null;
   const { password, passwordHash, ...cleanUser } = user;
   return cleanUser;
 }
 
 /**
- * Reusable Route Handler guard ensuring a live session exists.
+ * Reusable Route Handler guard ensuring a live Better Auth session exists.
  * Returns { user, session } or a JSON 401 response.
  */
 export async function requireSession(request) {
-  const session = await getServerSession(request);
-  if (!session || !session.user) {
+  const sessionData = await getServerSession(request);
+  if (!sessionData || !sessionData.user) {
     return {
       errorResponse: NextResponse.json(
         {
           success: false,
-          error: "Unauthorized: Valid session required",
+          error: "Unauthorized: Valid Better Auth session required",
           code: "UNAUTHORIZED",
         },
         { status: 401 }
@@ -94,12 +66,16 @@ export async function requireSession(request) {
       session: null,
     };
   }
-  return { errorResponse: null, user: session.user, session: session.session };
+  return {
+    errorResponse: null,
+    user: sessionData.user,
+    session: sessionData.session,
+  };
 }
 
 /**
  * Reusable Route Handler guard ensuring the authenticated user has an allowed role.
- * Returns errorResponse or null.
+ * Returns errorResponse (NextResponse) or null if authorized.
  */
 export function requireRole(user, allowedRoles = []) {
   if (!user) {
@@ -113,7 +89,7 @@ export function requireRole(user, allowedRoles = []) {
     );
   }
 
-  // Admins always have access across resources for moderation
+  // Admins have access across resources for moderation and audits
   if (user.role === ROLES.ADMIN) {
     return null;
   }
@@ -139,5 +115,5 @@ export function requireRole(user, allowedRoles = []) {
 export function assertOwnership(ownerId, user) {
   if (!user) return false;
   if (user.role === ROLES.ADMIN) return true;
-  return user.id === ownerId;
+  return user.id === ownerId || user._id === ownerId;
 }

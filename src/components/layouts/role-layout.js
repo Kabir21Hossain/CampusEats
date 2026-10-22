@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { ROLES } from "@/lib/constants";
@@ -8,74 +8,74 @@ import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { DemoRoleBanner } from "@/components/shared/demo-role-banner";
 import { ShieldAlert } from "lucide-react";
-import { toast } from "sonner";
 
-export function RoleLayout({ children, activeRoleTitle }) {
+function RoleLayoutInner({ children, activeRoleTitle }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { role, isAuthenticated, mounted } = useAuth();
+  const { role, isAuthenticated, isPending, mounted, routeToRolePage } = useAuth();
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    if (!mounted) return;
-
-    // Check permissions
-    if (pathname.startsWith("/student") && role !== ROLES.STUDENT && role !== ROLES.ADMIN) {
-      toast.error("Access Restricted: Student Portal is only accessible to students.");
-      if (role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
-      else if (role === ROLES.RIDER) router.push("/rider/available-orders");
-      else router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    if (isPending || !mounted) {
       setAuthorized(false);
       return;
     }
 
-    if (pathname.startsWith("/shop-owner") && role !== ROLES.SHOP_OWNER && role !== ROLES.ADMIN) {
-      toast.error("Access Restricted: Shop Owner Portal is only accessible to canteen owners.");
-      if (role === ROLES.STUDENT) router.push("/student/home");
-      else if (role === ROLES.RIDER) router.push("/rider/available-orders");
-      else router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    const requiredRole = pathname.startsWith("/student")
+      ? ROLES.STUDENT
+      : pathname.startsWith("/shop-owner")
+      ? ROLES.SHOP_OWNER
+      : pathname.startsWith("/rider")
+      ? ROLES.RIDER
+      : ROLES.ADMIN;
+
+    if (!isAuthenticated) {
+      router.replace(`/signin?redirect=${encodeURIComponent(pathname)}`);
       setAuthorized(false);
       return;
     }
 
-    if (pathname.startsWith("/rider") && role !== ROLES.RIDER && role !== ROLES.ADMIN) {
-      toast.error("Access Restricted: Rider Portal is only accessible to registered delivery riders.");
-      if (role === ROLES.STUDENT) router.push("/student/home");
-      else if (role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
-      else router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-      setAuthorized(false);
-      return;
-    }
-
-    if (pathname.startsWith("/admin") && role !== ROLES.ADMIN) {
-      toast.error("Access Restricted: Admin Console is strictly restricted to university administrators.");
-      if (role === ROLES.STUDENT) router.push("/student/home");
-      else if (role === ROLES.SHOP_OWNER) router.push("/shop-owner/dashboard");
-      else if (role === ROLES.RIDER) router.push("/rider/available-orders");
-      else router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    if (role !== requiredRole && role !== ROLES.ADMIN) {
+      routeToRolePage(role);
       setAuthorized(false);
       return;
     }
 
     setAuthorized(true);
-  }, [pathname, role, mounted, router]);
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8faf8] dark:bg-[#0d1511]">
-        <div className="h-6 w-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  }, [isAuthenticated, isPending, mounted, pathname, role, routeToRolePage, router]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee]">
+    <div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee] transition-colors">
       <DemoRoleBanner />
       <Navbar />
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {children}
+
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {!authorized ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center space-y-3">
+            <div className="p-3 bg-rose-100 dark:bg-rose-950/60 rounded-2xl text-rose-600 dark:text-rose-400">
+              <ShieldAlert className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              Verifying Authorization...
+            </h2>
+            <p className="text-xs text-zinc-500 max-w-sm">
+              Checking your Better Auth role permissions against server records.
+            </p>
+          </div>
+        ) : (
+          children
+        )}
       </main>
+
       <Footer />
     </div>
+  );
+}
+
+export function RoleLayout(props) {
+  return (
+    <Suspense fallback={null}>
+      <RoleLayoutInner {...props} />
+    </Suspense>
   );
 }

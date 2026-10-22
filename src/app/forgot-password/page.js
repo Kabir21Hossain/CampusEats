@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
                       If an account exists under <strong>{email}</strong>, a one-time verification link has been sent. Please check your inbox.
                     </p>
                   </div>
-                  <Link href="/login">
+                  <Link href="/signin">
                     <Button variant="outline" size="md" className="w-full">
                       Back to Sign In
                     </Button>
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
 
           <div className="text-center">
             <Link
-              href="/login"
+              href="/signin"
               className="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:text-emerald-700"
             >
               <ArrowLeft className="h-3.5 w-3.5" />

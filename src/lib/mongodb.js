@@ -1,29 +1,31 @@
-/**
- * MongoDB Shared Driver Client Connection
- * As specified in architecture.md section 2 & 7
- */
-
 import { MongoClient } from "mongodb";
 
 const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/campuseats";
-const options = {};
+
+if (!process.env.MONGODB_URI) {
+  console.warn("[MongoDB Warning] MONGODB_URI environment variable is not defined in process.env. Ensure .env.local is loaded.");
+}
+
+const options = {
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
+};
 
 let client;
 let clientPromise;
 
 if (process.env.NODE_ENV === "development") {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect().catch((err) => {
-      // In development mock mode, gracefully handle offline local mongo
-      console.warn("MongoDB connection deferred in development mode:", err.message);
-      return null;
-    });
+  if (!globalThis._mongoClientPromise) {
+    client = new MongoClient(uri || "mongodb://localhost:27017/campuseats", options);
+    globalThis._mongoClient = client;
+    globalThis._mongoClientPromise = client.connect();
   }
-  clientPromise = global._mongoClientPromise;
+  client = globalThis._mongoClient;
+  clientPromise = globalThis._mongoClientPromise;
 } else {
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }
 
+export { client };
 export default clientPromise;
