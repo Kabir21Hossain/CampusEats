@@ -178,12 +178,12 @@ export default function OrderTrackingPage({ params }) {
               <HandoverCodeDisplay
                 code={order.deliveryVerificationCode}
                 title="Delivery Handover Code"
-                subtitle="Share this code with your assigned rider when they arrive."
+                subtitle="When your rider arrives, show them this code. They enter it to verify delivery."
               />
 
               <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-center">
                 <p className="text-xs text-blue-800 dark:text-blue-300">
-                  Your assigned rider confirms delivery using this code. Only the rider can complete the handover.
+                  Keep this code private until the rider is physically handing over your order. The rider must enter the matching code to complete delivery.
                 </p>
               </div>
             </div>

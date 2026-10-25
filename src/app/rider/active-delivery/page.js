@@ -33,7 +33,7 @@ export default function RiderActiveDeliveryPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [activeStep, setActiveStep] = useState(1); // 1 = Heading to Shop, 2 = Verify Pickup, 3 = Heading to Dorm, 4 = Verify Handover, 5 = Completed
+  const [activeStep, setActiveStep] = useState(1); // 1 = pickup, 3 = delivery route, 4 = delivery verification, 5 = completed
 
   const loadActiveOrder = () => {
     setLoading(true);
@@ -230,7 +230,7 @@ export default function RiderActiveDeliveryPage() {
               Verify Handover with Student
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Ask the student for the delivery code shown on their order details.
+              Ask the student to show their delivery code, then enter the matching code below.
             </p>
           </div>
 

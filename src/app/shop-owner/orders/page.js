@@ -236,14 +236,14 @@ export default function ShopOwnerOrdersPage() {
                       </Button>
                     )}
 
-                    {ord.status === ORDER_STATUS.AWAITING_RIDER && (
+                    {[ORDER_STATUS.AWAITING_RIDER, ORDER_STATUS.CLAIMED].includes(ord.status) && (
                       <Button
                         variant="primary"
                         size="sm"
                         onClick={() => setActiveQRModalOrder(ord)}
                         className="w-full sm:w-auto rounded-xl text-xs font-bold"
                       >
-                        Show Pickup Verification Code
+                        Show Shop Handover Code
                       </Button>
                     )}
 
@@ -266,14 +266,14 @@ export default function ShopOwnerOrdersPage() {
         isOpen={!!activeQRModalOrder}
         onClose={() => setActiveQRModalOrder(null)}
         title={`Rider Pickup Verification — #${activeQRModalOrder?.id}`}
-        description="Present this code to the student delivery rider when handing over the sealed food parcel"
+        description="Once a rider claims this order, show the code to them when handing over the food. The rider enters it to confirm pickup."
       >
         {activeQRModalOrder && (
           <div className="space-y-4 text-center">
             <HandoverCodeDisplay
               code={activeQRModalOrder.pickupVerificationCode}
               title="Shop Handover Code"
-              subtitle="Show this code to the assigned rider for manual entry."
+              subtitle="Show this code to the assigned rider. They enter it in Active Delivery to confirm pickup."
             />
             <Button
               variant="outline"
