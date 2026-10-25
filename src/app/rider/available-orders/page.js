@@ -108,6 +108,7 @@ export default function RiderAvailableOrdersPage() {
     );
     setClaimingId(null);
     if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
       toast.success("Order claimed! Heading to active delivery workflow.");
       router.push("/rider/active-delivery");
     } else {

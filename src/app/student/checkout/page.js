@@ -103,6 +103,7 @@ function CheckoutContent() {
     try {
       const res = await orderService.createOrder(orderPayload);
       if (res.success) {
+        if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
         // Trigger celebratory confetti
         try {
           confetti({

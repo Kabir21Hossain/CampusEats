@@ -85,7 +85,12 @@ export async function apiRequest(endpoint, options = {}) {
       );
     }
 
-    return createSuccessResponse(payload, { status: response.status });
+    return createSuccessResponse(payload, {
+      status: response.status,
+      ...(payload?.notificationsSent === false
+        ? { notificationWarning: "This action completed, but one or more in-app notifications could not be saved." }
+        : {}),
+    });
   } catch (error) {
     return createErrorResponse(
       "NETWORK_ERROR",

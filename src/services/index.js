@@ -60,6 +60,12 @@ function normalizeOrder(order) {
   };
 }
 
+function responseMeta(response) {
+  return response.meta?.notificationWarning
+    ? { notificationWarning: response.meta.notificationWarning }
+    : {};
+}
+
 async function listShopMenu(shopId) {
   const response = await apiRequest(`/shops/${encodeURIComponent(shopId)}/menu`);
   if (!response.success) return response;
@@ -230,7 +236,7 @@ export const orderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no order.", 502);
   },
 
@@ -252,7 +258,7 @@ export const orderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no created order.", 502);
   },
 
@@ -267,7 +273,7 @@ export const orderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated order.", 502);
   },
 
@@ -279,7 +285,7 @@ export const orderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no cancelled order.", 502);
   },
 
@@ -294,7 +300,7 @@ export const orderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no rated order.", 502);
   },
 };
@@ -343,7 +349,7 @@ export const riderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no claimed order.", 502);
   },
 
@@ -355,7 +361,7 @@ export const riderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no verified order.", 502);
   },
 
@@ -367,8 +373,36 @@ export const riderService = {
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
-      ? createSuccessResponse(normalizeOrder(order))
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no delivered order.", 502);
+  },
+};
+
+export const notificationService = {
+  async listNotifications() {
+    const response = await apiRequest("/notifications");
+    if (!response.success) return response;
+    const notifications = responseItem(response, "notifications");
+    if (!Array.isArray(notifications)) {
+      return createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid notification list.", 502);
+    }
+    return createSuccessResponse(
+      notifications.map((notification) => ({
+        ...notification,
+        body: notification.body || notification.message || "",
+        isRead: notification.isRead === true,
+      }))
+    );
+  },
+
+  async markRead(notificationId) {
+    return apiRequest(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+      method: "PATCH",
+    });
+  },
+
+  async markAllRead() {
+    return apiRequest("/notifications/read-all", { method: "PATCH" });
   },
 };
 

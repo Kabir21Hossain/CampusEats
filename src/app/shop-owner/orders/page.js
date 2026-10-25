@@ -51,6 +51,7 @@ export default function ShopOwnerOrdersPage() {
   const handleUpdateStatus = async (orderId, newStatus) => {
     const res = await orderService.updateOrderStatus(orderId, newStatus);
     if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
       toast.success(`Order #${orderId} marked as ${ORDER_STATUS_LABELS[newStatus]}`);
       loadOrders();
     } else {
@@ -61,6 +62,7 @@ export default function ShopOwnerOrdersPage() {
   const handleReject = async (orderId) => {
     const res = await orderService.updateOrderStatus(orderId, ORDER_STATUS.CANCELLED);
     if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
       toast.info(`Order #${orderId} was cancelled.`);
       loadOrders();
     } else {

@@ -44,6 +44,9 @@ Every backend operation independently validates the authoritative Better Auth se
 | **POST** | `/api/orders` | Protected | `student`, `admin` | Authoritative server price calculation | `400`, `401`, `403` | Denies unauthenticated checkout |
 | **GET** | `/api/orders` | Protected | All authenticated | Role-filtered; verification codes are returned only to the student or shop owner who needs them | `401` | Verifies Student A does not see Student B's orders or another role's handover codes |
 | **GET** | `/api/orders/:id` | Protected | All authenticated | Must be order student, shop owner, assigned rider, or admin; handover codes are role-limited | `401`, `403 FORBIDDEN`, `404` | Denies unrelated student access and prevents rider/admin code disclosure |
+| **GET** | `/api/notifications` | Protected | All authenticated | Returns only the signed-in user's latest 50 notifications | `401` | Denies access to another user's notifications |
+| **PATCH** | `/api/notifications/:id/read` | Protected | All authenticated | Marks only the signed-in user's notification read | `401`, `404` | Denies changing another user's notification |
+| **PATCH** | `/api/notifications/read-all` | Protected | All authenticated | Marks the signed-in user's notifications read | `401` | Does not change other users' notifications |
 | **PATCH**| `/api/orders/:id/status`| Protected | `shop_owner`, `admin` | Enforces `placed → accepted → preparing → ready_for_pickup`; cancellation only before rider claim | `400`, `401`, `403 FORBIDDEN`, `404`, `409` | Rejects skipped or stale order transitions |
 | **GET** | `/api/rider/availability`| Protected | `rider` | Returns the server-persisted online state | `401`, `403 FORBIDDEN` | Rider availability survives navigation and reloads |
 | **PATCH** | `/api/rider/availability`| Protected | `rider` | Persists `isOnline`; client cannot set the field through signup | `400`, `401`, `403 FORBIDDEN` | Rejects non-boolean availability changes |
@@ -55,4 +58,4 @@ Every backend operation independently validates the authoritative Better Auth se
 | **GET** | `/api/admin/users` | Protected | `admin` | Sensitive fields (`passwordHash`) excluded | `401`, `403 FORBIDDEN` | Denies non-admin access |
 | **PATCH**| `/api/admin/users/:id` | Protected | `admin` | Admin moderation only | `401`, `403 FORBIDDEN` | Denies non-admin updating user roles |
 
-Order views and rider feeds refresh while open. A rider sees an order only after the shop moves it to `ready_for_pickup`; sandbox payment and delivery completion do not transfer or settle real funds.
+Order views, rider feeds, and authenticated notification lists refresh while open. Order lifecycle and application updates create persistent in-app notifications for affected students, shop owners, online riders, and administrators. A rider sees a pickup-code form immediately after claiming an order; the shop must first move it to `ready_for_pickup`. Sandbox payment and delivery completion do not transfer or settle real funds.

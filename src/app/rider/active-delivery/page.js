@@ -32,6 +32,7 @@ export default function RiderActiveDeliveryPage() {
   const { currentUser } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [activeStep, setActiveStep] = useState(1); // 1 = Heading to Shop, 2 = Verify Pickup, 3 = Heading to Dorm, 4 = Verify Handover, 5 = Completed
 
   const loadActiveOrder = () => {
@@ -39,6 +40,7 @@ export default function RiderActiveDeliveryPage() {
     riderService.getActiveDelivery().then((res) => {
       if (res.success && res.data) {
         setOrder(res.data);
+        setLoadError("");
         if (res.data.status === ORDER_STATUS.PICKED_UP) {
           setActiveStep(3); // Already picked up, en route to dorm
         } else {
@@ -46,6 +48,7 @@ export default function RiderActiveDeliveryPage() {
         }
       } else {
         setOrder(null);
+        setLoadError(res.error?.message || "");
       }
       setLoading(false);
     });
@@ -58,6 +61,7 @@ export default function RiderActiveDeliveryPage() {
   const handleVerifyPickup = async (code) => {
     const res = await riderService.verifyPickup(order.id, code);
     if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
       toast.success("Pickup verified! Food collected from canteen.");
       setOrder(res.data);
       setActiveStep(3); // Advance to en route to student
@@ -69,6 +73,7 @@ export default function RiderActiveDeliveryPage() {
   const handleVerifyDelivery = async (code) => {
     const res = await riderService.verifyDelivery(order.id, code);
     if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
       try {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
       } catch {}
@@ -89,10 +94,10 @@ export default function RiderActiveDeliveryPage() {
       <div className="py-16 max-w-md mx-auto">
         <EmptyState
           icon={Bike}
-          title="No active delivery in progress"
-          description="You don't have an ongoing delivery right now. Check the available feed to claim a new order."
-          actionText="View Available Orders"
-          onAction={() => router.push("/rider/available-orders")}
+          title={loadError ? "Unable to load delivery" : "No active delivery in progress"}
+          description={loadError || "You don't have an ongoing delivery right now. Check the available feed to claim a new order."}
+          actionText={loadError ? "Try again" : "View Available Orders"}
+          onAction={loadError ? loadActiveOrder : () => router.push("/rider/available-orders")}
         />
       </div>
     );
@@ -152,46 +157,23 @@ export default function RiderActiveDeliveryPage() {
               </ul>
             </div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => setActiveStep(2)}
-              className="w-full rounded-xl font-bold py-3 text-sm"
-            >
-              <QrCode className="h-4 w-4 mr-2" />
-              <span>Arrived at Canteen — Verify Pickup</span>
-            </Button>
+            <div className="space-y-3 border-t border-zinc-100 dark:border-zinc-800 pt-5">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Shop handover code
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Ask the shop staff for the pickup code when you collect the order.
+                </p>
+              </div>
+              <HandoverCodeForm
+                onVerify={handleVerifyPickup}
+                actionLabel="Verify Pickup"
+                codeLength={4}
+              />
+            </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* STEP 2: Verify Pickup Code */}
-      {activeStep === 2 && (
-        <div className="space-y-4">
-          <div className="text-center space-y-1">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              Verify Canteen Pickup
-            </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Ask shop staff for the pickup code and enter it below.
-            </p>
-          </div>
-
-          <HandoverCodeForm
-            onVerify={handleVerifyPickup}
-            actionLabel="Verify Pickup"
-          />
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setActiveStep(1)}
-              className="text-xs text-zinc-400 hover:underline"
-            >
-              ← Back to Canteen Directions
-            </button>
-          </div>
-        </div>
       )}
 
       {/* STEP 3: En route to Student Dormitory */}
@@ -255,6 +237,7 @@ export default function RiderActiveDeliveryPage() {
           <HandoverCodeForm
             onVerify={handleVerifyDelivery}
             actionLabel="Complete Handover"
+            codeLength={6}
           />
 
           <div className="text-center">

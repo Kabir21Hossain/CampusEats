@@ -12,6 +12,8 @@ Configure MongoDB credentials and the same `BETTER_AUTH_SECRET` (at least 32 cha
 
 The browser stores its Better Auth cookie for the API origin and sends it on credentialed API requests. The frontend's role layout therefore reads the session from the API, while every protected backend endpoint independently verifies that session and the user's approval state. For production, use stable custom frontend/API domains on the same site when possible; cross-site cookie restrictions can prevent auth cookies from being sent even when CORS is configured. Restart both servers after changing local values. Check backend health at `http://localhost:5000/api/health`.
 
+Authenticated notifications are stored in MongoDB and scoped to the signed-in user at `/api/notifications`. The frontend refreshes them every 15 seconds while the tab is visible; notification reads are persisted through `/api/notifications/:id/read` and `/api/notifications/read-all`.
+
 If the database is empty and you want the project's sample records, run `npm run seed` from the backend project before starting the frontend.
 
 Cookie authentication requires the backend CORS `FRONTEND_URL` to match the browser origin exactly. Set the frontend's deployed API URL in `NEXT_PUBLIC_API_BASE_URL`; set the backend's `FRONTEND_URL` to the deployed frontend origin and `BETTER_AUTH_URL` to the deployed backend origin.

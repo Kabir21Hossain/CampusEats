@@ -1,11 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient, useSession, getSession } from "@/lib/auth-client";
 import { ROLES } from "@/lib/constants";
 import { apiRequest } from "@/services/api-client";
+import { notificationService } from "@/services";
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,7 @@ export function AuthProvider({ children }) {
 
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [notificationError, setNotificationError] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -24,6 +26,37 @@ export function AuthProvider({ children }) {
   const currentUser = sessionData?.user || null;
   const activeRole = currentUser?.role || "visitor";
   const isAuthenticated = Boolean(currentUser);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!currentUser?.id) {
+      setNotifications([]);
+      setNotificationError("");
+      return;
+    }
+
+    const response = await notificationService.listNotifications();
+    if (!response.success) {
+      setNotificationError(response.error?.message || "Unable to load notifications.");
+      return;
+    }
+
+    setNotifications(response.data);
+    setNotificationError("");
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setNotifications([]);
+      setNotificationError("");
+      return undefined;
+    }
+
+    refreshNotifications();
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") refreshNotifications();
+    }, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [currentUser?.id, refreshNotifications]);
 
   /**
    * Helper to redirect user to their assigned role portal
@@ -144,12 +177,32 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const markNotificationRead = (notifId) => {
-    setNotifications((prev) => {
-      return prev.map((n) =>
-        n.id === notifId ? { ...n, isRead: true } : n
-      );
-    });
+  const markNotificationRead = async (notifId) => {
+    const previous = notifications;
+    setNotifications((prev) => prev.map((n) =>
+      n.id === notifId ? { ...n, isRead: true } : n
+    ));
+    const response = await notificationService.markRead(notifId);
+    if (!response.success) {
+      setNotifications(previous);
+      setNotificationError(response.error?.message || "Unable to mark notification as read.");
+      return false;
+    }
+    setNotificationError("");
+    return true;
+  };
+
+  const markAllNotificationsRead = async () => {
+    const previous = notifications;
+    setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
+    const response = await notificationService.markAllRead();
+    if (!response.success) {
+      setNotifications(previous);
+      setNotificationError(response.error?.message || "Unable to mark notifications as read.");
+      return false;
+    }
+    setNotificationError("");
+    return true;
   };
 
   const unreadNotificationsCount = notifications.filter(
@@ -174,8 +227,11 @@ export function AuthProvider({ children }) {
         notifications: currentUser
           ? notifications.filter((n) => n.userId === currentUser.id)
           : [],
+        notificationError,
         unreadNotificationsCount,
         markNotificationRead,
+        markAllNotificationsRead,
+        refreshNotifications,
         mounted,
       }}
     >

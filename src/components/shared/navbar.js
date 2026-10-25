@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useCart } from "@/context/cart-context";
 import { ROLES } from "@/lib/constants";
@@ -27,7 +27,18 @@ import { cn } from "@/lib/utils";
 
 function NavbarContent() {
   const pathname = usePathname();
-  const { role, currentUser, logout, notifications, unreadNotificationsCount, markNotificationRead, mounted } = useAuth();
+  const router = useRouter();
+  const {
+    role,
+    currentUser,
+    logout,
+    notifications,
+    notificationError,
+    unreadNotificationsCount,
+    markNotificationRead,
+    markAllNotificationsRead,
+    refreshNotifications,
+  } = useAuth();
   const { itemCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
@@ -94,7 +105,7 @@ function NavbarContent() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/85 dark:bg-zinc-950/85 backdrop-blur-md transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-800 to-emerald-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-200">
@@ -105,7 +116,7 @@ function NavbarContent() {
               <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-zinc-50 font-sans">
                 Campus<span className="text-emerald-700 dark:text-emerald-400">Eats</span>
               </span>
-              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <span className="hidden sm:inline text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                 DU Campus
               </span>
             </div>
@@ -137,7 +148,7 @@ function NavbarContent() {
         </nav>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {/* Cart Trigger (for students) */}
           {role === ROLES.STUDENT && (
             <Link
@@ -146,7 +157,7 @@ function NavbarContent() {
               aria-label="View shopping cart"
             >
               <ShoppingBag className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-              <span className="text-xs font-bold">{itemCount}</span>
+              <span className="hidden sm:inline text-xs font-bold">{itemCount}</span>
               <span className="hidden sm:inline text-xs font-medium">Cart</span>
               {itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white shadow-xs">
@@ -157,10 +168,11 @@ function NavbarContent() {
           )}
 
           {/* Notifications Popover */}
-          <div className="relative">
+          {currentUser && <div className="relative">
             <button
               type="button"
               onClick={() => setNotifsOpen(!notifsOpen)}
+              aria-expanded={notifsOpen}
               className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs"
               aria-label="Notifications"
             >
@@ -174,7 +186,7 @@ function NavbarContent() {
 
             {/* Notification Menu */}
             {notifsOpen && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
+              <div className="fixed left-4 right-4 top-20 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-100 dark:border-zinc-800">
                   <h4 className="font-semibold text-xs text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
                     Notifications
@@ -183,6 +195,27 @@ function NavbarContent() {
                     {unreadNotificationsCount} unread
                   </span>
                 </div>
+                {unreadNotificationsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => markAllNotificationsRead()}
+                    className="w-full px-4 py-2 text-left text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                {notificationError && (
+                  <div className="px-4 py-2 text-[11px] text-rose-600 dark:text-rose-400">
+                    <p role="alert">{notificationError}</p>
+                    <button
+                      type="button"
+                      onClick={refreshNotifications}
+                      className="mt-1 font-semibold underline"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
                 <div className="max-h-72 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/60">
                   {notifications.length === 0 ? (
                     <div className="p-4 text-center text-xs text-zinc-400">
@@ -190,14 +223,23 @@ function NavbarContent() {
                     </div>
                   ) : (
                     notifications.map((n) => (
-                      <div
+                      <button
+                        type="button"
                         key={n.id}
-                        onClick={() => {
-                          markNotificationRead(n.id);
+                        onClick={async () => {
+                          const markedRead = await markNotificationRead(n.id);
+                          if (!markedRead) return;
                           setNotifsOpen(false);
+                          if (
+                            typeof n.href === "string" &&
+                            n.href.startsWith("/") &&
+                            !n.href.startsWith("//")
+                          ) {
+                            router.push(n.href);
+                          }
                         }}
                         className={cn(
-                          "p-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors text-left",
+                          "block w-full p-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors text-left",
                           !n.isRead && "bg-emerald-50/40 dark:bg-emerald-950/20"
                         )}
                       >
@@ -212,20 +254,22 @@ function NavbarContent() {
                         <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5 line-clamp-2">
                           {n.body}
                         </p>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Theme Toggle */}
-          <ThemeToggle />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
 
           {/* User Profile / Auth State */}
           {currentUser ? (
-            <div className="relative pl-1">
+            <div className="relative hidden sm:block pl-1">
               <button
                 type="button"
                 onClick={() => setProfileOpen(!profileOpen)}
@@ -327,7 +371,9 @@ function NavbarContent() {
             <span className="text-xs text-zinc-500">
               Role: <strong className="text-zinc-800 dark:text-zinc-200 uppercase">{role}</strong>
             </span>
-            {currentUser && (
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              {currentUser && (
               <button
                 type="button"
                 onClick={() => {
@@ -339,7 +385,8 @@ function NavbarContent() {
                 <LogOut className="h-3.5 w-3.5" />
                 <span>Sign Out</span>
               </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
