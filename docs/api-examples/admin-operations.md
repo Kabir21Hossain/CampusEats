@@ -60,7 +60,7 @@ Content-Type: application/json
   "user": {
     "id": "student-2",
     "name": "Sadia Islam",
-    "email": "sadia.islam@du.ac.bd",
+    "email": "sadia.islam@example.com",
     "role": "shop_owner",
     "isApproved": true,
     "isSuspended": false,

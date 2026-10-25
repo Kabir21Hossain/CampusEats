@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function Navbar() {
+function NavbarContent() {
   const pathname = usePathname();
   const { role, currentUser, logout, notifications, unreadNotificationsCount, markNotificationRead, mounted } = useAuth();
   const { itemCount } = useCart();
@@ -43,6 +43,7 @@ export function Navbar() {
         { href: "/student/profile", label: "Profile" },
       ];
     }
+
     if (role === ROLES.SHOP_OWNER) {
       return [
         { href: "/shop-owner/dashboard", label: "Dashboard" },
@@ -343,5 +344,13 @@ export function Navbar() {
         </div>
       )}
     </header>
+  );
+}
+
+export function Navbar() {
+  return (
+    <Suspense fallback={<div className="h-16 shrink-0" aria-hidden="true" />}>
+      <NavbarContent />
+    </Suspense>
   );
 }

@@ -29,6 +29,7 @@ export default function StudentCartPage() {
     itemCount,
     subtotal,
     deliveryFee,
+    platformFee,
     total,
     updateQuantity,
     removeItem,
@@ -178,6 +179,12 @@ export default function StudentCartPage() {
                   </span>
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                     {formatCurrency(deliveryFee)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(platformFee)}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex justify-between text-sm font-extrabold text-zinc-900 dark:text-zinc-50">

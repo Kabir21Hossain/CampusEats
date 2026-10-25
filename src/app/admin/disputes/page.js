@@ -21,6 +21,7 @@ import { toast } from "sonner";
 
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState([]);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   // Resolution modal
@@ -33,6 +34,7 @@ export default function AdminDisputesPage() {
     setLoading(true);
     adminService.getDisputes().then((res) => {
       if (res.success) setDisputes(res.data);
+      else setError(res.error.message);
       setLoading(false);
     });
   };
@@ -65,6 +67,8 @@ export default function AdminDisputesPage() {
       toast.success(`Dispute #${activeDispute.id} resolved successfully!`);
       setActiveDispute(null);
       loadDisputes();
+    } else {
+      toast.error(res.error.message);
     }
   };
 
@@ -79,7 +83,11 @@ export default function AdminDisputesPage() {
         </p>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div role="alert" className="p-8 rounded-2xl border border-amber-200 bg-amber-50 text-center text-sm text-amber-800">
+          Dispute management is unavailable: {error}
+        </div>
+      ) : loading ? (
         <div className="p-12 text-center text-xs text-zinc-400">Loading disputes...</div>
       ) : disputes.length === 0 ? (
         <div className="p-12 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400">

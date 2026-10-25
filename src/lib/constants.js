@@ -11,25 +11,25 @@ export const ROLES = {
 
 export const ORDER_STATUS = {
   PLACED: "placed",
-  CONFIRMED: "confirmed",
-  AWAITING_RIDER: "awaiting_rider",
+  CONFIRMED: "accepted",
+  PREPARING: "preparing",
+  AWAITING_RIDER: "ready_for_pickup",
   CLAIMED: "claimed",
-  PICKED_UP: "picked_up",
+  PICKED_UP: "in_transit",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",
-  REJECTED: "rejected",
   DISPUTED: "disputed",
 };
 
 export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.PLACED]: "Order Placed",
-  [ORDER_STATUS.CONFIRMED]: "Preparing Food",
+  [ORDER_STATUS.CONFIRMED]: "Accepted",
+  [ORDER_STATUS.PREPARING]: "Preparing Food",
   [ORDER_STATUS.AWAITING_RIDER]: "Ready for Pickup",
   [ORDER_STATUS.CLAIMED]: "Rider Assigned",
   [ORDER_STATUS.PICKED_UP]: "Out for Delivery",
   [ORDER_STATUS.DELIVERED]: "Delivered",
   [ORDER_STATUS.CANCELLED]: "Cancelled",
-  [ORDER_STATUS.REJECTED]: "Declined by Shop",
   [ORDER_STATUS.DISPUTED]: "Under Dispute",
 };
 
@@ -41,7 +41,6 @@ export const ORDER_STATUS_COLORS = {
   [ORDER_STATUS.PICKED_UP]: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800",
   [ORDER_STATUS.DELIVERED]: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   [ORDER_STATUS.CANCELLED]: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800",
-  [ORDER_STATUS.REJECTED]: "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
   [ORDER_STATUS.DISPUTED]: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800",
 };
 
@@ -53,27 +52,28 @@ export const ESCROW_CONFIG = {
 };
 
 // Base delivery fee in BDT
-export const DEFAULT_DELIVERY_FEE = 30;
+export const DEFAULT_DELIVERY_FEE = 20;
+export const DEFAULT_PLATFORM_FEE = 5;
 
 // Campus Dormitories and Landmark addresses
 export const CAMPUS_LOCATIONS = [
-  "Shahidullah Hall",
-  "Fazlul Huq Muslim Hall",
-  "Jagannath Hall",
-  "Salimullah Muslim Hall",
-  "Zahir Raihan Hall",
-  "Rokeya Hall",
-  "Kabi Sufia Kamal Hall",
-  "Shamsun Nahar Hall",
+  "Al Beruni Hall",
   "Bangabandhu Sheikh Mujibur Rahman Hall",
-  "Bijoy Ekattor Hall",
-  "Muktijoddha Ziaur Rahman Hall",
-  "Central Library Area",
-  "TSC (Teacher-Student Centre)",
-  "Science Complex & Cafeteria",
-  "Curzon Hall Quad",
-  "Engineering Faculty Gate",
-  "Arts Faculty Lawn",
+  "Mir Mosharraf Hossain Hall",
+  "Shaheed Salam-Barkat Hall",
+  "Shaheed Rafiq-Jabbar Hall",
+  "Shaheed Tareq Huda Hall",
+  "Jahanara Imam Hall",
+  "Pritilata Hall",
+  "Nawab Faizunnessa Hall",
+  "Fajilatunnesa Hall",
+  "Begum Khaleda Zia Hall",
+  "Sheikh Hasina Hall",
+  "Central Shaheed Minar",
+  "Muktomoncho",
+  "Bottola",
+  "Dairy Gate",
+  "Main Gate",
 ];
 
 export const CUISINE_CATEGORIES = [

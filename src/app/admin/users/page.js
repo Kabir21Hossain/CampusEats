@@ -26,6 +26,7 @@ export default function AdminUsersPage() {
 
   const [suspendingUser, setSuspendingUser] = useState(null);
   const [suspendReason, setSuspendReason] = useState("");
+  const [approvingUserId, setApprovingUserId] = useState(null);
 
   const loadUsers = () => {
     setLoading(true);
@@ -54,6 +55,23 @@ export default function AdminUsersPage() {
       setSuspendingUser(null);
       setSuspendReason("");
       loadUsers();
+    } else {
+      toast.error(res.error.message);
+    }
+  };
+
+  const handleApproveUser = async (user) => {
+    setApprovingUserId(user.id);
+    const result =
+      user.role === "shop_owner"
+        ? await adminService.reviewShopApplication(user.id, "approved")
+        : await adminService.approveUser(user.id);
+    setApprovingUserId(null);
+    if (result.success) {
+      toast.success(`${user.name}'s account has been approved.`);
+      loadUsers();
+    } else {
+      toast.error(result.error.message);
     }
   };
 
@@ -86,7 +104,7 @@ export default function AdminUsersPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by student name, ID, or campus email..."
+            placeholder="Search by student name, ID, or email..."
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
@@ -170,6 +188,15 @@ export default function AdminUsersPage() {
                           <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-bold">
                             <Ban className="h-3.5 w-3.5" /> Suspended
                           </span>
+                        ) : u.verificationStatus === "rejected" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-bold">
+                            Rejected
+                          </span>
+                        ) : u.isApproved === false ||
+                          u.verificationStatus === "pending" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 font-bold">
+                            Pending approval
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
                             <ShieldCheck className="h-3.5 w-3.5" /> Active
@@ -178,6 +205,18 @@ export default function AdminUsersPage() {
                       </td>
 
                       <td className="py-3 text-right">
+                        {(u.isApproved === false ||
+                          u.verificationStatus === "pending") &&
+                          u.verificationStatus !== "rejected" && (
+                            <button
+                              type="button"
+                              disabled={approvingUserId === u.id}
+                              onClick={() => handleApproveUser(u)}
+                              className="mr-2 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                            >
+                              {approvingUserId === u.id ? "Approving..." : "Approve"}
+                            </button>
+                          )}
                         {u.role !== "admin" && (
                           <button
                             type="button"

@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import { orderService } from "@/services/order-service";
+import { usePolling } from "@/hooks/use-polling";
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
 import { OrderStatusStepper } from "@/components/shared/order-status-stepper";
-import { QRDisplay } from "@/components/shared/qr-display";
+import { HandoverCodeDisplay } from "@/components/shared/handover-code-display";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -24,7 +24,6 @@ import {
   AlertTriangle,
   RotateCcw,
 } from "lucide-react";
-import confetti from "canvas-confetti";
 import { toast } from "sonner";
 
 export default function OrderTrackingPage({ params }) {
@@ -33,28 +32,28 @@ export default function OrderTrackingPage({ params }) {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Cancellation modal
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [cancelLoading, setCancelLoading] = useState(false);
-
-  // Rating modal
-  const [showRatingModal, setShowRatingModal] = useState(false);
-  const [shopRating, setShopRating] = useState(5);
-  const [riderRating, setRiderRating] = useState(5);
+  const [loadError, setLoadError] = useState("");
+  const [selectedRating, setSelectedRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const loadOrder = () => {
-    orderService.getOrderById(orderId).then((res) => {
-      if (res.success) setOrder(res.data);
-      setLoading(false);
-    });
-  };
+  const loadOrder = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const res = await orderService.getOrderById(orderId);
+    if (res.success) {
+      setOrder(res.data);
+      setLoadError("");
+    } else {
+      setLoadError(res.error?.message || "Unable to load order details.");
+    }
+    if (showLoading) setLoading(false);
+  }, [orderId]);
 
   useEffect(() => {
     loadOrder();
-  }, [orderId]);
+  }, [loadOrder]);
+
+  usePolling(() => loadOrder(false), 10000);
 
   if (loading) {
     return (
@@ -67,7 +66,13 @@ export default function OrderTrackingPage({ params }) {
   if (!order) {
     return (
       <div className="py-20 text-center space-y-4">
-        <h2 className="text-xl font-bold">Order Not Found</h2>
+        <h2 className="text-xl font-bold">{loadError ? "Order Unavailable" : "Order Not Found"}</h2>
+        {loadError && <p role="alert" className="text-sm text-rose-600">{loadError}</p>}
+        {loadError && (
+          <Button variant="outline" onClick={() => loadOrder()}>
+            Try again
+          </Button>
+        )}
         <Link href="/student/orders">
           <Button variant="primary">Back to Orders</Button>
         </Link>
@@ -76,54 +81,49 @@ export default function OrderTrackingPage({ params }) {
   }
 
   const isDelivered = order.status === ORDER_STATUS.DELIVERED;
-  const isCancelled =
-    order.status === ORDER_STATUS.CANCELLED || order.status === ORDER_STATUS.REJECTED;
+  const isCancelled = order.status === ORDER_STATUS.CANCELLED;
+  const canCancel = [
+    ORDER_STATUS.PLACED,
+    ORDER_STATUS.CONFIRMED,
+    ORDER_STATUS.PREPARING,
+    ORDER_STATUS.AWAITING_RIDER,
+  ].includes(order.status);
 
   const handleCancelOrder = async () => {
-    if (!cancelReason.trim()) {
-      toast.error("Please enter a cancellation reason");
-      return;
-    }
-    setCancelLoading(true);
-    const res = await orderService.cancelOrder(order.id, cancelReason);
-    setCancelLoading(false);
-    if (res.success) {
-      toast.success("Order cancelled and escrow refund initiated.");
-      setShowCancelModal(false);
-      loadOrder();
+    setActionLoading(true);
+    const result = await orderService.cancelOrder(order.id);
+    setActionLoading(false);
+    if (result.success) {
+      setOrder(result.data);
+      toast.success("Order cancelled.");
     } else {
-      toast.error(res.error?.message || "Cancellation failed");
+      toast.error(result.error.message);
     }
   };
 
-  const handleSimulateHandover = async () => {
-    const res = await orderService.updateOrderStatus(order.id, ORDER_STATUS.DELIVERED);
-    if (res.success) {
-      try {
-        confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
-      } catch {}
-      toast.success("Handover confirmed! Escrow funds released.");
-      loadOrder();
-      setShowRatingModal(true);
-    }
-  };
-
-  const handleSaveRating = async (e) => {
-    e.preventDefault();
-    const res = await orderService.rateOrder(order.id, {
-      shopRating,
-      riderRating,
+  const handleRateOrder = async () => {
+    setActionLoading(true);
+    const result = await orderService.rateOrder(order.id, {
+      shopRating: selectedRating,
       reviewText,
     });
-    if (res.success) {
-      toast.success("Thank you for your rating & review!");
-      setShowRatingModal(false);
-      loadOrder();
+    setActionLoading(false);
+    if (result.success) {
+      setOrder(result.data);
+      toast.success("Thanks for rating your order.");
+    } else {
+      toast.error(result.error.message);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-16">
+      {loadError && (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          Showing the latest loaded order details. Refresh failed: {loadError}
+        </p>
+      )}
+
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link
@@ -171,30 +171,20 @@ export default function OrderTrackingPage({ params }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-        {/* Left Side: Handover QR Code / Rider Card */}
+        {/* Left Side: Handover Code / Rider Card */}
         <div className="md:col-span-7 space-y-6">
           {!isDelivered && !isCancelled && (
             <div className="space-y-4">
-              <QRDisplay
+              <HandoverCodeDisplay
                 code={order.deliveryVerificationCode}
                 title="Delivery Handover Code"
-                subtitle="Present this QR code or 4-digit code to the rider at your hall gate"
+                subtitle="Share this code with your assigned rider when they arrive."
               />
 
-              {/* Developer / Demo Quick Handover Simulation Button */}
-              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
-                <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                  Demo Action: Simulate Rider Arrival &amp; Handover
+              <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-center">
+                <p className="text-xs text-blue-800 dark:text-blue-300">
+                  Your assigned rider confirms delivery using this code. Only the rider can complete the handover.
                 </p>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={handleSimulateHandover}
-                  className="w-full rounded-xl text-xs font-bold"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Confirm Handover &amp; Release Escrow
-                </Button>
               </div>
             </div>
           )}
@@ -210,7 +200,7 @@ export default function OrderTrackingPage({ params }) {
                   Order Successfully Delivered!
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-sm mx-auto">
-                  Escrow payment has been verified and settled to {order.shopName} (85%) and rider (12%).
+                  Your order is complete. bKash is simulated and cash collection is not verified here, so no real payment or payout was processed.
                 </p>
 
                 {order.ratingGiven ? (
@@ -226,15 +216,45 @@ export default function OrderTrackingPage({ params }) {
                     )}
                   </div>
                 ) : (
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => setShowRatingModal(true)}
-                    className="rounded-xl"
-                  >
-                    <Star className="h-4 w-4" />
-                    Rate Shop &amp; Rider
-                  </Button>
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500">How was your order?</p>
+                    <div className="flex justify-center gap-1" aria-label="Rate this order">
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          aria-label={`${rating} star${rating === 1 ? "" : "s"}`}
+                          aria-pressed={selectedRating === rating}
+                          onClick={() => setSelectedRating(rating)}
+                          className="rounded p-1 text-amber-500"
+                        >
+                          <Star
+                            className={`h-5 w-5 ${
+                              rating <= selectedRating ? "fill-current" : ""
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={reviewText}
+                      onChange={(event) => setReviewText(event.target.value)}
+                      maxLength={1000}
+                      rows={3}
+                      placeholder="Share feedback (optional)"
+                      className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      isLoading={actionLoading}
+                      onClick={handleRateOrder}
+                      className="rounded-xl"
+                    >
+                      Submit Rating
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -258,13 +278,15 @@ export default function OrderTrackingPage({ params }) {
                   </div>
                 </div>
 
-                <a
-                  href={`tel:${order.riderPhone || "+8801911223344"}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
-                >
-                  <Phone className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Call Rider</span>
-                </a>
+                {order.riderPhone && (
+                  <a
+                    href={`tel:${order.riderPhone}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                  >
+                    <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Call Rider</span>
+                  </a>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -317,6 +339,12 @@ export default function OrderTrackingPage({ params }) {
                     {formatCurrency(order.deliveryFee)}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(order.platformFee)}
+                  </span>
+                </div>
                 <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex justify-between text-sm font-extrabold text-zinc-900 dark:text-zinc-50">
                   <span>Total</span>
                   <span className="text-emerald-700 dark:text-emerald-400">
@@ -338,16 +366,24 @@ export default function OrderTrackingPage({ params }) {
                 )}
               </div>
 
-              {/* Cancellation policy action */}
               {!isDelivered && !isCancelled && (
                 <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowCancelModal(true)}
-                    className="w-full text-xs font-semibold text-rose-600 hover:text-rose-700 py-1"
-                  >
-                    Cancel Order
-                  </button>
+                  {canCancel ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      isLoading={actionLoading}
+                      onClick={handleCancelOrder}
+                      className="w-full rounded-xl text-rose-700"
+                    >
+                      Cancel Order
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-zinc-500">
+                      This order can no longer be cancelled after rider pickup.
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -355,117 +391,6 @@ export default function OrderTrackingPage({ params }) {
         </div>
       </div>
 
-      {/* Cancel Order Modal */}
-      <Modal
-        isOpen={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
-        title="Cancel Order & Refund Escrow"
-        description="Orders can only be cancelled before food is picked up by a rider."
-      >
-        <div className="space-y-4 text-left">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              Reason for Cancellation
-            </label>
-            <textarea
-              rows={3}
-              placeholder="e.g. Ordered by mistake, long wait time..."
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-rose-500"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => setShowCancelModal(false)}
-              className="flex-1"
-            >
-              Keep Order
-            </Button>
-            <Button
-              variant="danger"
-              size="md"
-              isLoading={cancelLoading}
-              onClick={handleCancelOrder}
-              className="flex-1"
-            >
-              Confirm Cancellation
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Rating & Review Modal */}
-      <Modal
-        isOpen={showRatingModal}
-        onClose={() => setShowRatingModal(false)}
-        title="Rate Your Food & Delivery"
-        description="Help improve campus dining with your feedback"
-      >
-        <form onSubmit={handleSaveRating} className="space-y-4 text-left">
-          {/* Shop rating */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              Canteen Food Rating ({shopRating}/5)
-            </label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setShopRating(star)}
-                  className={`p-1.5 rounded-lg text-lg transition-transform hover:scale-110 ${
-                    star <= shopRating ? "text-amber-400" : "text-zinc-300 dark:text-zinc-700"
-                  }`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Rider rating */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              Rider Delivery Rating ({riderRating}/5)
-            </label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRiderRating(star)}
-                  className={`p-1.5 rounded-lg text-lg transition-transform hover:scale-110 ${
-                    star <= riderRating ? "text-amber-400" : "text-zinc-300 dark:text-zinc-700"
-                  }`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              Review Comment
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Food temperature, packaging, speed..."
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          <Button type="submit" variant="primary" size="md" className="w-full rounded-xl font-bold">
-            Submit Rating &amp; Review
-          </Button>
-        </form>
-      </Modal>
     </div>
   );
 }

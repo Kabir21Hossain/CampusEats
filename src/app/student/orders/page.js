@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { orderService } from "@/services/order-service";
+import { usePolling } from "@/hooks/use-polling";
 import { useAuth } from "@/context/auth-context";
 import { useCart } from "@/context/cart-context";
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/constants";
@@ -28,21 +29,28 @@ export default function StudentOrdersPage() {
   const { addItem } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  const loadOrders = () => {
-    setLoading(true);
-    orderService
-      .listOrders({ customerUserId: currentUser?.id || "student-1" })
-      .then((res) => {
-        if (res.success) setOrders(res.data);
-        setLoading(false);
-      });
-  };
+  const loadOrders = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const res = await orderService.listOrders();
+    if (res.success) {
+      setOrders(res.data);
+      setLoadError("");
+    } else {
+      setLoadError(res.error?.message || "Unable to load your orders.");
+    }
+    if (showLoading) setLoading(false);
+  }, []);
 
   useEffect(() => {
-    loadOrders();
-  }, [currentUser]);
+    if (currentUser) loadOrders();
+  }, [currentUser?.id, loadOrders]);
+
+  usePolling(() => {
+    if (currentUser) loadOrders(false);
+  }, 10000);
 
   const activeOrders = orders.filter((o) =>
     [
@@ -56,7 +64,7 @@ export default function StudentOrdersPage() {
 
   const completedOrders = orders.filter((o) => o.status === ORDER_STATUS.DELIVERED);
   const cancelledOrders = orders.filter((o) =>
-    [ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED].includes(o.status)
+    [ORDER_STATUS.CANCELLED].includes(o.status)
   );
 
   const tabs = [
@@ -112,10 +120,23 @@ export default function StudentOrdersPage() {
 
       {/* Tabs */}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {loadError && orders.length > 0 && (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          Showing the latest loaded orders. Refresh failed: {loadError}
+        </p>
+      )}
 
       {/* Orders List */}
       {loading ? (
         <div className="p-12 text-center text-xs text-zinc-400">Loading orders...</div>
+      ) : loadError && orders.length === 0 ? (
+        <EmptyState
+          icon={Package}
+          title="Orders unavailable"
+          description={loadError}
+          actionText="Try again"
+          onAction={() => loadOrders()}
+        />
       ) : displayedOrders.length === 0 ? (
         <EmptyState
           icon={Package}

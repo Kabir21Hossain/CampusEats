@@ -9,7 +9,7 @@ import { ORDER_STATUS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { QRScannerSim } from "@/components/shared/qr-scanner-sim";
+import { HandoverCodeForm } from "@/components/shared/handover-code-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -36,7 +36,7 @@ export default function RiderActiveDeliveryPage() {
 
   const loadActiveOrder = () => {
     setLoading(true);
-    riderService.getActiveDelivery(currentUser?.id || "rider-1").then((res) => {
+    riderService.getActiveDelivery().then((res) => {
       if (res.success && res.data) {
         setOrder(res.data);
         if (res.data.status === ORDER_STATUS.PICKED_UP) {
@@ -72,7 +72,7 @@ export default function RiderActiveDeliveryPage() {
       try {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
       } catch {}
-      toast.success("Delivery completed! Earnings credited to your wallet.");
+      toast.success("Delivery completed. Sandbox settlement was recorded.");
       setOrder(res.data);
       setActiveStep(5); // Completed!
     } else {
@@ -165,7 +165,7 @@ export default function RiderActiveDeliveryPage() {
         </Card>
       )}
 
-      {/* STEP 2: Verify Pickup via QR */}
+      {/* STEP 2: Verify Pickup Code */}
       {activeStep === 2 && (
         <div className="space-y-4">
           <div className="text-center space-y-1">
@@ -173,12 +173,11 @@ export default function RiderActiveDeliveryPage() {
               Verify Canteen Pickup
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Ask canteen staff to show the order's pickup QR code or enter code
+              Ask shop staff for the pickup code and enter it below.
             </p>
           </div>
 
-          <QRScannerSim
-            expectedCode={order.pickupVerificationCode}
+          <HandoverCodeForm
             onVerify={handleVerifyPickup}
             actionLabel="Verify Pickup"
           />
@@ -241,7 +240,7 @@ export default function RiderActiveDeliveryPage() {
         </Card>
       )}
 
-      {/* STEP 4: Verify Handover with Student QR */}
+      {/* STEP 4: Verify Handover Code with Student */}
       {activeStep === 4 && (
         <div className="space-y-4">
           <div className="text-center space-y-1">
@@ -249,12 +248,11 @@ export default function RiderActiveDeliveryPage() {
               Verify Handover with Student
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Scan the QR code displayed on the student's phone to release escrow
+              Ask the student for the delivery code shown on their order details.
             </p>
           </div>
 
-          <QRScannerSim
-            expectedCode={order.deliveryVerificationCode}
+          <HandoverCodeForm
             onVerify={handleVerifyDelivery}
             actionLabel="Complete Handover"
           />
@@ -280,14 +278,14 @@ export default function RiderActiveDeliveryPage() {
             </div>
 
             <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50">
-              Delivery Completed &amp; Escrow Settled!
+              Delivery Completed
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
-              Order #{order?.id} verified. Your delivery fee of{" "}
+              Order #{order?.id} verified. Estimated delivery fee:{" "}
               <strong className="text-emerald-700 dark:text-emerald-400 font-bold">
                 {formatCurrency(riderEarnings)}
-              </strong>{" "}
-              has been deposited into your rider wallet.
+              </strong>
+              . This sandbox app does not transfer funds or maintain a wallet balance.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row gap-2 justify-center">
@@ -298,7 +296,7 @@ export default function RiderActiveDeliveryPage() {
               </Link>
               <Link href="/rider/earnings">
                 <Button variant="outline" size="md" className="rounded-xl w-full sm:w-auto">
-                  View Wallet Balance
+                  Earnings information
                 </Button>
               </Link>
             </div>

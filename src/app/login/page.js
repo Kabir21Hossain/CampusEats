@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
@@ -12,18 +11,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UtensilsCrossed, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login, isAuthenticated, isPending } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  React.useEffect(() => {
-    if (!isPending && isAuthenticated) {
-      router.replace("/");
-    }
-  }, [isAuthenticated, isPending, router]);
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +30,7 @@ export default function LoginPage() {
     const result = await login({ email, password });
     setLoading(false);
     if (!result?.success) {
-      setError(result?.error || "Invalid campus credentials. Please check your email.");
+      setError(result?.error || "Invalid account credentials. Please check your email.");
     }
   };
 
@@ -72,9 +64,9 @@ export default function LoginPage() {
                 )}
 
                 <Input
-                  label="Campus Email"
+                  label="Email"
                   type="email"
-                  placeholder="name@du.ac.bd"
+                  placeholder="name@example.com"
                   icon={Mail}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

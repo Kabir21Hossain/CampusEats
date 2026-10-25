@@ -19,7 +19,7 @@
       "orderNumber": "CE-481920",
       "shopName": "Campus Grill & Cafe",
       "status": "ready_for_pickup",
-      "deliveryLocation": "Shahidullah Hall, Room 314"
+      "deliveryLocation": "Al Beruni Hall, Room 314"
     }
   ]
 }

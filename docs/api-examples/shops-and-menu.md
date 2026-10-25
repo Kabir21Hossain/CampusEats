@@ -18,7 +18,7 @@
       "id": "shop-1",
       "name": "Campus Grill & Cafe",
       "cuisine": "Burgers & Fast Food",
-      "campusLocation": "TSC Food Court, North Corner",
+      "campusLocation": "Central Cafeteria, North Corner",
       "operatingHours": "10:00 AM - 11:30 PM",
       "isOpen": true,
       "rating": 4.8,
@@ -47,7 +47,7 @@
     {
       "id": "item-101",
       "shopId": "shop-1",
-      "name": "Classic TSC Smash Burger",
+      "name": "Classic Cafeteria Smash Burger",
       "price": 180,
       "category": "Burgers",
       "isAvailable": true

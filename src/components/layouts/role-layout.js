@@ -12,7 +12,14 @@ import { ShieldAlert } from "lucide-react";
 function RoleLayoutInner({ children, activeRoleTitle }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { role, isAuthenticated, isPending, mounted, routeToRolePage } = useAuth();
+  const {
+    currentUser,
+    role,
+    isAuthenticated,
+    isPending,
+    mounted,
+    routeToRolePage,
+  } = useAuth();
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
@@ -35,6 +42,21 @@ function RoleLayoutInner({ children, activeRoleTitle }) {
       return;
     }
 
+    if (
+      currentUser?.isApproved === false ||
+      currentUser?.verificationStatus === "pending" ||
+      currentUser?.verificationStatus === "rejected"
+    ) {
+      const type = currentUser.role === ROLES.SHOP_OWNER ? "shop" : "rider";
+      const status =
+        currentUser.verificationStatus === "rejected" ? "rejected" : "pending";
+      router.replace(
+        `/verification-status?type=${type}&status=${status}&name=${encodeURIComponent(currentUser.shopName || currentUser.name || "your application")}`
+      );
+      setAuthorized(false);
+      return;
+    }
+
     if (role !== requiredRole && role !== ROLES.ADMIN) {
       routeToRolePage(role);
       setAuthorized(false);
@@ -42,7 +64,16 @@ function RoleLayoutInner({ children, activeRoleTitle }) {
     }
 
     setAuthorized(true);
-  }, [isAuthenticated, isPending, mounted, pathname, role, routeToRolePage, router]);
+  }, [
+    currentUser,
+    isAuthenticated,
+    isPending,
+    mounted,
+    pathname,
+    role,
+    routeToRolePage,
+    router,
+  ]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee] transition-colors">

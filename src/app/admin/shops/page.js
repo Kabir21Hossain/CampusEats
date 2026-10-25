@@ -25,6 +25,7 @@ import { toast } from "sonner";
 export default function AdminShopApprovalsPage() {
   const [applications, setApplications] = useState([]);
   const [existingShops, setExistingShops] = useState([]);
+  const [applicationError, setApplicationError] = useState("");
   const [loading, setLoading] = useState(true);
 
   // Reject modal
@@ -38,7 +39,12 @@ export default function AdminShopApprovalsPage() {
       adminService.getShopApplications(),
       shopService.listShops(),
     ]).then(([appRes, shopRes]) => {
-      if (appRes.success) setApplications(appRes.data);
+      if (appRes.success) {
+        setApplications(appRes.data);
+        setApplicationError("");
+      } else {
+        setApplicationError(appRes.error.message);
+      }
       if (shopRes.success) setExistingShops(shopRes.data);
       setLoading(false);
     });
@@ -55,6 +61,8 @@ export default function AdminShopApprovalsPage() {
     if (res.success) {
       toast.success(`Application approved! "${app.shopName}" is now an active campus canteen.`);
       loadData();
+    } else {
+      toast.error(res.error.message);
     }
   };
 
@@ -75,6 +83,8 @@ export default function AdminShopApprovalsPage() {
       setRejectingApp(null);
       setRejectReason("");
       loadData();
+    } else {
+      toast.error(res.error.message);
     }
   };
 
@@ -87,7 +97,7 @@ export default function AdminShopApprovalsPage() {
           Canteen Application &amp; Shop Approvals
         </h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-          Review commercial applications, verify trade licenses, and activate campus food canteens
+          Review submitted shop-owner applications and activate approved campus shops.
         </p>
       </div>
 
@@ -102,7 +112,11 @@ export default function AdminShopApprovalsPage() {
           </h2>
         </div>
 
-        {loading ? (
+        {applicationError ? (
+          <div role="alert" className="p-8 rounded-2xl border border-amber-200 bg-amber-50 text-center text-sm text-amber-800">
+            Shop applications are unavailable: {applicationError}
+          </div>
+        ) : loading ? (
           <div className="p-12 text-center text-xs text-zinc-400">Loading applications...</div>
         ) : pendingApps.length === 0 ? (
           <div className="p-8 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400">

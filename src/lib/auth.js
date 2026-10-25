@@ -6,12 +6,15 @@ import { ROLES } from "./constants.js";
 
 const dbName = process.env.MONGODB_DB || "campuseats";
 const db = client.db(dbName);
+const authSecret = process.env.BETTER_AUTH_SECRET;
+
+if (!authSecret || authSecret.length < 32) {
+  throw new Error("BETTER_AUTH_SECRET must be configured with at least 32 characters.");
+}
 
 export const auth = betterAuth({
   database: mongodbAdapter(db),
-  secret:
-    process.env.BETTER_AUTH_SECRET ||
-    "campuseats_development_secret_key_32_characters_minimum_auth",
+  secret: authSecret,
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   emailAndPassword: {
     enabled: true,
@@ -24,10 +27,7 @@ export const auth = betterAuth({
         type: "string",
         required: false,
         defaultValue: "student",
-      },
-      adminInvitationCode: {
-        type: "string",
-        required: false,
+        input: false,
       },
       studentId: {
         type: "string",
@@ -73,6 +73,12 @@ export const auth = betterAuth({
         type: "string",
         required: false,
       },
+      isOnline: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
       verificationStatus: {
         type: "string",
         required: false,
@@ -90,12 +96,6 @@ export const auth = betterAuth({
       create: {
         before: async (user) => {
           user.email = user.email.trim().toLowerCase();
-          if (!user.email.endsWith("@du.ac.bd")) {
-            throw new APIError("BAD_REQUEST", {
-              message: "Use a campus email address ending in @du.ac.bd",
-            });
-          }
-
           user.role = user.role || ROLES.STUDENT;
           if (!Object.values(ROLES).includes(user.role)) {
             throw new Error("Invalid account role");
@@ -138,16 +138,6 @@ export const auth = betterAuth({
             });
           }
 
-          if (user.role === ROLES.ADMIN) {
-            const invitationCode = user.adminInvitationCode;
-            const expectedCode = process.env.ADMIN_INVITATION_CODE;
-            if (!expectedCode || invitationCode !== expectedCode) {
-              throw new APIError("BAD_REQUEST", {
-                message: "Invalid administrator invitation code",
-              });
-            }
-            delete user.adminInvitationCode;
-          }
           // Shop owners and riders require admin verification/approval
           if (user.role === ROLES.SHOP_OWNER || user.role === ROLES.RIDER) {
             user.verificationStatus = "pending";

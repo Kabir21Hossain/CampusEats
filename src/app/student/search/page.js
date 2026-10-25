@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-function SearchContent() {
+export function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -195,7 +195,7 @@ function SearchContent() {
                 <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
                     <Link
-                      href={`/student/shops/${item.shopId}`}
+                      href={`/shops/${item.shopId}`}
                       className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline block mb-1 truncate"
                     >
                       {itemShop.name}

@@ -18,8 +18,6 @@ import {
   CreditCard,
   ShieldCheck,
   Building,
-  Phone,
-  User,
   CheckCircle2,
   Lock,
   ArrowRight,
@@ -34,12 +32,11 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const noteParam = searchParams.get("note") || "";
 
-  const { items, shop, subtotal, deliveryFee, total, clearCart } = useCart();
+  const { items, shop, subtotal, deliveryFee, platformFee, total, clearCart } = useCart();
   const { currentUser } = useAuth();
 
   const [deliveryHall, setDeliveryHall] = useState(CAMPUS_LOCATIONS[0]);
-  const [roomNumber, setRoomNumber] = useState("Room 304, 3rd Floor");
-  const [phone, setPhone] = useState(currentUser?.phone || "+880 1712-345678");
+  const [roomNumber, setRoomNumber] = useState("");
   const [deliveryNote, setDeliveryNote] = useState(noteParam);
   const [paymentMethod, setPaymentMethod] = useState("bKash Sandbox");
 
@@ -47,6 +44,13 @@ function CheckoutContent() {
   const [showBkashModal, setShowBkashModal] = useState(false);
   const [bkashPin, setBkashPin] = useState("");
   const [pinError, setPinError] = useState("");
+
+  useEffect(() => {
+    if (currentUser?.hall && CAMPUS_LOCATIONS.includes(currentUser.hall)) {
+      setDeliveryHall(currentUser.hall);
+    }
+    if (currentUser?.roomNumber) setRoomNumber(currentUser.roomNumber);
+  }, [currentUser?.id, currentUser?.hall, currentUser?.roomNumber]);
 
   if (items.length === 0) {
     return (
@@ -81,12 +85,7 @@ function CheckoutContent() {
   const executeOrderCreation = async () => {
     setIsPlacing(true);
     const orderPayload = {
-      customerUserId: currentUser?.id || "student-1",
-      customerName: currentUser?.name || "Tanvir Ahmed",
-      customerPhone: phone,
-      shopId: shop?.id || "shop-1",
-      shopName: shop?.name || "Campus Grill & Cafe",
-      shopLocation: shop?.campusLocation || "Campus",
+      shopId: shop?.id,
       deliveryAddress: `${deliveryHall}, ${roomNumber}`,
       deliveryNote,
       items: items.map((i) => ({
@@ -179,14 +178,6 @@ function CheckoutContent() {
                   required
                 />
 
-                <Input
-                  label="Phone for Handover Call"
-                  placeholder="+880 1712-345678"
-                  icon={Phone}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
               </div>
 
               <Input
@@ -204,7 +195,7 @@ function CheckoutContent() {
               <div className="flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <CreditCard className="h-4 w-4 text-emerald-600" />
                 <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                  Payment Method (Escrow Secured)
+                  Payment Method
                 </h3>
               </div>
 
@@ -219,13 +210,13 @@ function CheckoutContent() {
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-sm text-[#e2136e]">bKash Gateway</span>
+                    <span className="font-bold text-sm text-[#e2136e]">bKash Sandbox</span>
                     <Badge variant="default" size="sm" className="bg-[#e2136e] text-white text-[10px]">
-                      Instant Escrow
+                      Test Only
                     </Badge>
                   </div>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    Pay securely via simulated bKash wallet. Locked in escrow until QR handover.
+                    Payment is simulated. No money is transferred; a real payment integration is required before launch.
                   </p>
                 </div>
 
@@ -247,7 +238,7 @@ function CheckoutContent() {
                     </Badge>
                   </div>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    Hand exact cash (৳{total}) to the student rider upon QR handover.
+                    Cash is due to the delivery rider. This app does not verify or record cash collection.
                   </p>
                 </div>
               </div>
@@ -306,6 +297,12 @@ function CheckoutContent() {
                     {formatCurrency(deliveryFee)}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(platformFee)}
+                  </span>
+                </div>
                 <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex justify-between text-base font-extrabold text-zinc-900 dark:text-zinc-50">
                   <span>Total Amount</span>
                   <span className="text-emerald-700 dark:text-emerald-400">
@@ -317,7 +314,7 @@ function CheckoutContent() {
               <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 flex items-start gap-2 text-xs text-emerald-800 dark:text-emerald-300">
                 <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
                 <span className="leading-tight">
-                  Escrow Lock: 85% allocated to canteen, 12% to rider, 3% platform fee upon successful QR verification.
+                  Sandbox totals only: no escrow lock, real payment, or payout is processed.
                 </span>
               </div>
             </CardContent>

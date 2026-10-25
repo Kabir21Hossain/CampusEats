@@ -12,7 +12,7 @@
     "id": "notif-2",
     "userId": "rider-1",
     "title": "New Available Order",
-    "message": "Order #CE-981240 is ready for pickup at TSC Food Court.",
+    "message": "Order #CE-981240 is ready for pickup at Central Cafeteria.",
     "type": "rider_alert",
     "isRead": false,
     "createdAt": "2026-03-10T12:46:00.000Z"

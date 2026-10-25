@@ -79,11 +79,11 @@ Accept: application/json
   "user": {
     "id": "{{USER_ID}}",
     "name": "Nafis Fuad",
-    "email": "nafis.fuad@du.ac.bd",
+    "email": "nafis.fuad@example.com",
     "role": "student",
     "studentId": "2021-CS-042",
     "department": "Computer Science & Engineering",
-    "hall": "Shahidullah Hall",
+    "hall": "Al Beruni Hall",
     "phone": "+8801711000001",
     "isApproved": true,
     "isSuspended": false
@@ -112,7 +112,7 @@ Accept: application/json
 - **Method**: `POST`
 - **Path**: `/api/auth/register`
 - **Auth**: Public
-- **Allowed Roles**: Public (`student` registration only)
+- **Allowed Roles**: Student registration and pending shop-owner/rider applications; first admin uses the configured bootstrap email.
 
 ### Request Example
 ```http
@@ -122,12 +122,12 @@ Content-Type: application/json
 
 {
   "name": "Sadia Islam",
-  "email": "sadia.islam@du.ac.bd",
+  "email": "sadia.islam@example.com",
   "password": "{{STUDENT_PASSWORD}}",
   "role": "student",
   "studentId": "2022-ECO-108",
   "department": "Economics",
-  "hall": "Rokeya Hall",
+  "hall": "Jahanara Imam Hall",
   "phone": "+8801711000002"
 }
 ```
@@ -140,11 +140,11 @@ Content-Type: application/json
   "user": {
     "id": "usr_1710499200000_a1b2c3",
     "name": "Sadia Islam",
-    "email": "sadia.islam@du.ac.bd",
+    "email": "sadia.islam@example.com",
     "role": "student",
     "studentId": "2022-ECO-108",
     "department": "Economics",
-    "hall": "Rokeya Hall",
+    "hall": "Jahanara Imam Hall",
     "phone": "+8801711000002",
     "isApproved": true,
     "isSuspended": false
@@ -152,7 +152,7 @@ Content-Type: application/json
 }
 ```
 
-### Privileged Role Rejection (`403 Forbidden`)
+### Unauthorized Admin Bootstrap (`403 Forbidden`)
 ```json
 {
   "success": false,

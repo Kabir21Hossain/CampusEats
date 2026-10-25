@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { Suspense, use, useEffect, useState } from "react";
 import Link from "next/link";
 import { shopService } from "@/services/shop-service";
 import { menuService } from "@/services/menu-service";
@@ -22,7 +22,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-export default function ShopDetailPage({ params }) {
+function ShopDetailContent({ params }) {
   const unwrappedParams = use(params);
   const shopId = unwrappedParams.shopId;
 
@@ -76,7 +76,7 @@ export default function ShopDetailPage({ params }) {
       {/* Back button */}
       <div>
         <Link
-          href="/student/home"
+          href="/"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-emerald-700"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -266,5 +266,13 @@ export default function ShopDetailPage({ params }) {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ShopDetailPage({ params }) {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-sm text-zinc-500">Loading canteen menu...</div>}>
+      <ShopDetailContent params={params} />
+    </Suspense>
   );
 }

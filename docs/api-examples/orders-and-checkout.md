@@ -22,7 +22,7 @@ Content-Type: application/json
     { "id": "item-101", "quantity": 2 },
     { "id": "item-103", "quantity": 1 }
   ],
-  "deliveryLocation": "Shahidullah Hall, Room 314",
+  "deliveryLocation": "Al Beruni Hall, Room 314",
   "deliveryNotes": "Call when entering main gate",
   "paymentMethod": "bkash"
 }
@@ -38,13 +38,13 @@ Content-Type: application/json
     "orderNumber": "CE-481920",
     "studentId": "{{STUDENT_USER_ID}}",
     "customerName": "Nafis Fuad",
-    "customerEmail": "nafis.fuad@du.ac.bd",
+    "customerEmail": "nafis.fuad@example.com",
     "shopId": "shop-1",
     "shopName": "Campus Grill & Cafe",
     "items": [
       {
         "id": "item-101",
-        "name": "Classic TSC Smash Burger",
+        "name": "Classic Cafeteria Smash Burger",
         "price": 180,
         "quantity": 2,
         "subtotal": 360

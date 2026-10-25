@@ -20,6 +20,6 @@ export async function requirePageRole(requiredRole) {
 
   const userRole = sessionData.user.role;
   if (userRole !== requiredRole && userRole !== ROLES.ADMIN) {
-    redirect(dashboardByRole[userRole] || "/");
+    redirect(dashboardByRole[userRole] || "/signin");
   }
 }

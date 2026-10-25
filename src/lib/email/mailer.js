@@ -187,8 +187,8 @@ export const emailTemplates = {
           <p>Rider <strong>${escapeHtml(rider?.name || "Campus Rider")}</strong> (${escapeHtml(rider?.phone || "Phone verified")}) has picked up your food from <strong>${escapeHtml(order.shopName)}</strong> and is en route to your dorm.</p>
           <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
             <p style="margin: 4px 0;"><strong>Destination:</strong> ${escapeHtml(order.deliveryAddressSnapshot)}</p>
-            <p style="margin: 4px 0;"><strong>Your 4-Digit Delivery Code:</strong> <span style="font-size: 20px; font-weight: bold; letter-spacing: 2px;">${escapeHtml(order.deliveryVerificationCode || "----")}</span></p>
-            <p style="margin: 4px 0; font-size: 13px; color: #4b5563;">Provide this 4-digit code to the rider when they arrive at your dorm lobby to confirm delivery.</p>
+            <p style="margin: 4px 0;"><strong>Your Delivery Handover Code:</strong> <span style="font-size: 20px; font-weight: bold; letter-spacing: 2px;">${escapeHtml(order.deliveryVerificationCode || "----")}</span></p>
+            <p style="margin: 4px 0; font-size: 13px; color: #4b5563;">Provide this code to the rider when they arrive at your dorm lobby to confirm delivery.</p>
           </div>
           <p>Enjoy your meal!</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />

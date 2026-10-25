@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { orderService } from "@/services/order-service";
+import { usePolling } from "@/hooks/use-polling";
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs } from "@/components/ui/tabs";
 import { Modal } from "@/components/ui/modal";
-import { QRDisplay } from "@/components/shared/qr-display";
+import { HandoverCodeDisplay } from "@/components/shared/handover-code-display";
 import { formatCurrency, formatTime } from "@/lib/utils";
 import {
   ChefHat,
@@ -16,7 +17,6 @@ import {
   Check,
   X,
   PackageCheck,
-  QrCode,
   Bike,
   AlertCircle,
   Phone,
@@ -26,19 +26,27 @@ import { toast } from "sonner";
 export default function ShopOwnerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("live");
   const [activeQRModalOrder, setActiveQRModalOrder] = useState(null);
 
-  const loadOrders = () => {
-    orderService.listOrders({ shopId: "shop-1" }).then((res) => {
-      if (res.success) setOrders(res.data);
-      setLoading(false);
-    });
-  };
+  const loadOrders = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const res = await orderService.listOrders();
+    if (res.success) {
+      setOrders(res.data);
+      setLoadError("");
+    } else {
+      setLoadError(res.error?.message || "Unable to load the order queue.");
+    }
+    if (showLoading) setLoading(false);
+  }, []);
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
+
+  usePolling(() => loadOrders(false), 10000);
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     const res = await orderService.updateOrderStatus(orderId, newStatus);
@@ -51,15 +59,17 @@ export default function ShopOwnerOrdersPage() {
   };
 
   const handleReject = async (orderId) => {
-    const res = await orderService.updateOrderStatus(orderId, ORDER_STATUS.REJECTED);
+    const res = await orderService.updateOrderStatus(orderId, ORDER_STATUS.CANCELLED);
     if (res.success) {
-      toast.info(`Order #${orderId} was declined and customer notified.`);
+      toast.info(`Order #${orderId} was cancelled.`);
       loadOrders();
+    } else {
+      toast.error(res.error.message);
     }
   };
 
   const liveOrders = orders.filter((o) =>
-    [ORDER_STATUS.PLACED, ORDER_STATUS.CONFIRMED, ORDER_STATUS.AWAITING_RIDER].includes(o.status)
+    [ORDER_STATUS.PLACED, ORDER_STATUS.CONFIRMED, ORDER_STATUS.PREPARING, ORDER_STATUS.AWAITING_RIDER].includes(o.status)
   );
 
   const inTransitOrders = orders.filter((o) =>
@@ -67,7 +77,7 @@ export default function ShopOwnerOrdersPage() {
   );
 
   const completedOrders = orders.filter((o) =>
-    [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED].includes(o.status)
+    [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED].includes(o.status)
   );
 
   const tabs = [
@@ -97,15 +107,27 @@ export default function ShopOwnerOrdersPage() {
 
         <div className="flex items-center gap-2">
           <Badge variant="default" size="md" className="bg-emerald-100 text-emerald-800">
-            ● Real-Time Feed Active
+            ● Auto-refreshes every 10 seconds
           </Badge>
         </div>
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {loadError && orders.length > 0 && (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          Showing the latest loaded queue. Refresh failed: {loadError}
+        </p>
+      )}
 
       {loading ? (
         <div className="p-12 text-center text-xs text-zinc-400">Loading order queue...</div>
+      ) : loadError && orders.length === 0 ? (
+        <div role="alert" className="p-8 text-center text-sm text-rose-600">
+          {loadError}
+          <Button variant="outline" size="sm" onClick={() => loadOrders()} className="ml-3">
+            Retry
+          </Button>
+        </div>
       ) : displayedOrders.length === 0 ? (
         <div className="p-12 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400">
           No orders in this queue.
@@ -192,6 +214,18 @@ export default function ShopOwnerOrdersPage() {
                       <Button
                         variant="primary"
                         size="sm"
+                        onClick={() => handleUpdateStatus(ord.id, ORDER_STATUS.PREPARING)}
+                        className="w-full sm:w-auto rounded-xl text-xs font-bold"
+                      >
+                        <ChefHat className="h-3.5 w-3.5" />
+                        Start Preparing
+                      </Button>
+                    )}
+
+                    {ord.status === ORDER_STATUS.PREPARING && (
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => handleUpdateStatus(ord.id, ORDER_STATUS.AWAITING_RIDER)}
                         className="w-full sm:w-auto rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700"
                       >
@@ -207,8 +241,7 @@ export default function ShopOwnerOrdersPage() {
                         onClick={() => setActiveQRModalOrder(ord)}
                         className="w-full sm:w-auto rounded-xl text-xs font-bold"
                       >
-                        <QrCode className="h-3.5 w-3.5" />
-                        Show Pickup QR Code
+                        Show Pickup Verification Code
                       </Button>
                     )}
 
@@ -226,7 +259,7 @@ export default function ShopOwnerOrdersPage() {
         </div>
       )}
 
-      {/* Pickup QR Presentation Modal */}
+      {/* Pickup code presentation modal */}
       <Modal
         isOpen={!!activeQRModalOrder}
         onClose={() => setActiveQRModalOrder(null)}
@@ -235,10 +268,10 @@ export default function ShopOwnerOrdersPage() {
       >
         {activeQRModalOrder && (
           <div className="space-y-4 text-center">
-            <QRDisplay
+            <HandoverCodeDisplay
               code={activeQRModalOrder.pickupVerificationCode}
               title="Shop Handover Code"
-              subtitle="Rider will scan or enter this code in their rider app"
+              subtitle="Show this code to the assigned rider for manual entry."
             />
             <Button
               variant="outline"

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { riderService } from "@/services/rider-service";
 import { useAuth } from "@/context/auth-context";
+import { usePolling } from "@/hooks/use-polling";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,34 +27,84 @@ import { toast } from "sonner";
 export default function RiderAvailableOrdersPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [orders, setOrders] = useState([]);
   const [activeDelivery, setActiveDelivery] = useState(null);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState(null);
+  const [feedError, setFeedError] = useState("");
 
-  const loadFeed = () => {
-    setLoading(true);
-    Promise.all([
-      riderService.getAvailableOrders(),
-      riderService.getActiveDelivery(currentUser?.id || "rider-1"),
-    ]).then(([availRes, activeRes]) => {
-      if (availRes.success) setOrders(availRes.data);
-      if (activeRes.success) setActiveDelivery(activeRes.data);
-      setLoading(false);
-    });
-  };
+  const loadFeed = useCallback(async ({ showLoading = true } = {}) => {
+    if (showLoading) setLoading(true);
+    try {
+      const [availRes, activeRes] = await Promise.all([
+        riderService.getAvailableOrders(),
+        riderService.getActiveDelivery(),
+      ]);
+      if (!availRes.success) {
+        setFeedError(availRes.error?.message || "Unable to load delivery offers.");
+        return;
+      }
+      if (!activeRes.success) {
+        setFeedError(activeRes.error?.message || "Unable to load your active delivery.");
+        return;
+      }
+      setOrders(availRes.data);
+      setActiveDelivery(activeRes.data);
+      setFeedError("");
+    } catch (error) {
+      setFeedError(error.message || "Unable to load delivery offers.");
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    loadFeed();
-  }, [currentUser]);
+    if (currentUser) loadFeed();
+  }, [currentUser?.id, loadFeed]);
+
+  usePolling(() => {
+    if (isOnline) loadFeed({ showLoading: false });
+  }, 10000);
+
+  useEffect(() => {
+    let isActive = true;
+    if (currentUser) {
+      setAvailabilityLoading(true);
+      riderService.getAvailability().then((result) => {
+        if (!isActive) return;
+        if (result.success) {
+          setIsOnline(result.data.isOnline);
+        } else {
+          setFeedError(result.error?.message || "Unable to load rider availability.");
+        }
+        setAvailabilityLoading(false);
+      });
+    }
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id]);
+
+  const handleAvailabilityChange = async () => {
+    if (availabilityLoading) return;
+    setAvailabilityLoading(true);
+    const result = await riderService.setAvailability(!isOnline);
+    setAvailabilityLoading(false);
+    if (!result.success) {
+      toast.error(result.error?.message || "Unable to update availability.");
+      return;
+    }
+    setIsOnline(result.data.isOnline);
+    if (result.data.isOnline) loadFeed();
+    toast.info(result.data.isOnline ? "You are now online for delivery requests." : "You are now offline.");
+  };
 
   const handleClaim = async (orderId) => {
     setClaimingId(orderId);
     const res = await riderService.claimOrder(
-      orderId,
-      currentUser?.id || "rider-1",
-      currentUser?.name || "Sabbir Hossain"
+      orderId
     );
     setClaimingId(null);
     if (res.success) {
@@ -102,10 +153,8 @@ export default function RiderAvailableOrdersPage() {
           <Button
             variant={isOnline ? "outline" : "primary"}
             size="md"
-            onClick={() => {
-              setIsOnline(!isOnline);
-              toast.info(isOnline ? "Switched to Offline" : "You are now ONLINE for delivery requests!");
-            }}
+            onClick={handleAvailabilityChange}
+            disabled={availabilityLoading}
             className="rounded-xl text-xs font-semibold"
           >
             <Power className="h-3.5 w-3.5" />
@@ -159,17 +208,25 @@ export default function RiderAvailableOrdersPage() {
           <EmptyState
             icon={Power}
             title="You are currently offline"
-            description="Toggle your status to Online above to see available delivery requests near your campus hall."
+            description="Go online to refresh the delivery feed and claim available campus orders."
             actionText="Go Online"
-            onAction={() => setIsOnline(true)}
+            onAction={handleAvailabilityChange}
           />
         ) : loading ? (
           <div className="p-12 text-center text-xs text-zinc-400">Loading delivery feed...</div>
+        ) : feedError ? (
+          <EmptyState
+            icon={Bike}
+            title="Delivery feed unavailable"
+            description={feedError}
+            actionText="Retry"
+            onAction={() => loadFeed()}
+          />
         ) : orders.length === 0 ? (
           <EmptyState
             icon={Bike}
             title="No orders awaiting delivery"
-            description="All orders have currently been claimed. New requests from campus canteens will appear here automatically."
+            description="Orders appear here after the shop confirms they are ready for pickup. This feed refreshes automatically while you are online."
             actionText="Refresh Feed"
             onAction={loadFeed}
           />

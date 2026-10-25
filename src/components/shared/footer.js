@@ -33,12 +33,12 @@ export function Footer() {
             </h5>
             <ul className="space-y-1.5 text-xs">
               <li>
-                <Link href="/student/home" className="hover:text-emerald-600 transition-colors">
+                <Link href="/" className="hover:text-emerald-600 transition-colors">
                   Explore Campus Shops
                 </Link>
               </li>
               <li>
-                <Link href="/student/search" className="hover:text-emerald-600 transition-colors">
+                <Link href="/search" className="hover:text-emerald-600 transition-colors">
                   Food Search &amp; Dietary Filter
                 </Link>
               </li>

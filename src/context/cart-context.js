@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { DEFAULT_DELIVERY_FEE } from "@/lib/constants";
+import { DEFAULT_DELIVERY_FEE, DEFAULT_PLATFORM_FEE } from "@/lib/constants";
 import { toast } from "sonner";
 
 const CartContext = createContext(null);
@@ -98,7 +98,8 @@ export function CartProvider({ children }) {
     0
   );
   const deliveryFee = items.length > 0 ? DEFAULT_DELIVERY_FEE : 0;
-  const total = subtotal + deliveryFee;
+  const platformFee = items.length > 0 ? DEFAULT_PLATFORM_FEE : 0;
+  const total = subtotal + deliveryFee + platformFee;
 
   return (
     <CartContext.Provider
@@ -108,6 +109,7 @@ export function CartProvider({ children }) {
         itemCount,
         subtotal,
         deliveryFee,
+        platformFee,
         total,
         addItem,
         updateQuantity,

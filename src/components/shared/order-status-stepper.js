@@ -15,9 +15,21 @@ export function OrderStatusStepper({ status, timestamps = {} }) {
     },
     {
       id: ORDER_STATUS.CONFIRMED,
-      label: "Kitchen Preparing",
+      label: "Accepted",
       icon: ChefHat,
       time: timestamps.confirmedAt,
+    },
+    {
+      id: ORDER_STATUS.PREPARING,
+      label: "Preparing",
+      icon: ChefHat,
+      time: timestamps.preparingAt,
+    },
+    {
+      id: ORDER_STATUS.AWAITING_RIDER,
+      label: "Ready for Pickup",
+      icon: PackageCheck,
+      time: timestamps.readyForPickupAt,
     },
     {
       id: ORDER_STATUS.CLAIMED,
@@ -44,21 +56,24 @@ export function OrderStatusStepper({ status, timestamps = {} }) {
       case ORDER_STATUS.PLACED:
         return 0;
       case ORDER_STATUS.CONFIRMED:
-      case ORDER_STATUS.AWAITING_RIDER:
         return 1;
-      case ORDER_STATUS.CLAIMED:
+      case ORDER_STATUS.PREPARING:
         return 2;
-      case ORDER_STATUS.PICKED_UP:
+      case ORDER_STATUS.AWAITING_RIDER:
         return 3;
-      case ORDER_STATUS.DELIVERED:
+      case ORDER_STATUS.CLAIMED:
         return 4;
+      case ORDER_STATUS.PICKED_UP:
+        return 5;
+      case ORDER_STATUS.DELIVERED:
+        return 6;
       default:
         return -1;
     }
   };
 
   const currentIndex = getStatusIndex(status);
-  const isCancelled = status === ORDER_STATUS.CANCELLED || status === ORDER_STATUS.REJECTED;
+  const isCancelled = status === ORDER_STATUS.CANCELLED;
 
   if (isCancelled) {
     return (
@@ -66,10 +81,10 @@ export function OrderStatusStepper({ status, timestamps = {} }) {
         <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
         <div>
           <p className="font-semibold text-sm">
-            {status === ORDER_STATUS.CANCELLED ? "Order Cancelled" : "Order Declined by Shop"}
+            Order Cancelled
           </p>
           <p className="text-xs text-rose-600/90 dark:text-rose-400">
-            Escrow balance has been refunded to your payment wallet.
+            This order is no longer active.
           </p>
         </div>
       </div>

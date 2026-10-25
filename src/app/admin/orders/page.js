@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { orderService } from "@/services/order-service";
+import { usePolling } from "@/hooks/use-polling";
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,15 +22,27 @@ import {
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [inspectOrder, setInspectOrder] = useState(null);
 
-  useEffect(() => {
-    orderService.listOrders().then((res) => {
-      if (res.success) setOrders(res.data);
-      setLoading(false);
-    });
+  const loadOrders = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const res = await orderService.listOrders();
+    if (res.success) {
+      setOrders(res.data);
+      setLoadError("");
+    } else {
+      setLoadError(res.error?.message || "Unable to load platform orders.");
+    }
+    if (showLoading) setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  usePolling(() => loadOrders(false), 10000);
 
   const filteredOrders = orders.filter((o) => {
     if (statusFilter === "all") return true;
@@ -44,7 +57,7 @@ export default function AdminOrdersPage() {
             Platform-Wide Order Monitoring
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Real-time audit log of campus meals, escrow status, and delivery handovers
+            Automatically refreshed audit log of campus orders and delivery handovers
           </p>
         </div>
 
@@ -70,12 +83,24 @@ export default function AdminOrdersPage() {
           </button>
         ))}
       </div>
+      {loadError && orders.length > 0 && (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          Showing the latest loaded orders. Refresh failed: {loadError}
+        </p>
+      )}
 
       {/* Orders Table */}
       <Card>
         <CardContent className="p-6">
           {loading ? (
             <div className="py-12 text-center text-xs text-zinc-400">Loading orders...</div>
+          ) : loadError && orders.length === 0 ? (
+            <div role="alert" className="py-12 text-center text-sm text-rose-600">
+              {loadError}
+              <button type="button" onClick={() => loadOrders()} className="ml-2 underline">
+                Retry
+              </button>
+            </div>
           ) : filteredOrders.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-400">No orders matching filter.</div>
           ) : (
@@ -160,24 +185,15 @@ export default function AdminOrdersPage() {
                 </p>
               </div>
               <div>
-                <span className="text-zinc-400 font-medium">Escrow State:</span>
+                <span className="text-zinc-400 font-medium">Settlement Status:</span>
                 <p className="font-bold text-emerald-600 uppercase">
                   {inspectOrder.escrowStatus}
                 </p>
               </div>
-              <div>
-                <span className="text-zinc-400 font-medium">Pickup Token:</span>
-                <p className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                  {inspectOrder.pickupVerificationCode}
-                </p>
-              </div>
-              <div>
-                <span className="text-zinc-400 font-medium">Delivery Token:</span>
-                <p className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                  {inspectOrder.deliveryVerificationCode}
-                </p>
-              </div>
             </div>
+            <p className="text-[11px] text-zinc-500">
+              Handover codes are restricted to the student and shop owner and are not available in admin views.
+            </p>
 
             <div className="space-y-1">
               <span className="font-semibold text-zinc-700 dark:text-zinc-300">

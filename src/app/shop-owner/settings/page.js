@@ -2,36 +2,48 @@
 
 import React, { useState, useEffect } from "react";
 import { shopService } from "@/services/shop-service";
+import { useAuth } from "@/context/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Store, MapPin, Clock, Save, Image as ImageIcon } from "lucide-react";
+import { Store, MapPin, Save, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ShopOwnerSettingsPage() {
+  const { currentUser } = useAuth();
   const [shop, setShop] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    shopService.getShopById("shop-1").then((res) => {
+    shopService.getShopByOwner(currentUser?.id).then((res) => {
       if (res.success) setShop(res.data);
       setLoading(false);
     });
-  }, []);
+  }, [currentUser?.id]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const res = await shopService.updateShop("shop-1", shop);
+    const res = await shopService.updateShop(shop.id, {
+      name: shop.name,
+      campusLocation: shop.campusLocation,
+      description: shop.description,
+      bannerUrl: shop.bannerUrl,
+    });
     setSaving(false);
     if (res.success) {
       toast.success("Shop information updated successfully!");
+    } else {
+      toast.error(res.error.message);
     }
   };
 
   if (loading) {
     return <div className="p-12 text-center text-xs text-zinc-400">Loading settings...</div>;
+  }
+  if (!shop) {
+    return <div className="p-12 text-center text-xs text-zinc-500">No shop is assigned to this account yet.</div>;
   }
 
   return (
@@ -41,7 +53,7 @@ export default function ShopOwnerSettingsPage() {
           Canteen Settings &amp; Profile
         </h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-          Manage your campus stall hours, location details, and storefront presentation
+          Manage your shop name, location, description, and storefront banner
         </p>
       </div>
 
@@ -79,13 +91,6 @@ export default function ShopOwnerSettingsPage() {
                 required
               />
 
-              <Input
-                label="Operating Hours"
-                icon={Clock}
-                value={shop?.operatingHours || ""}
-                onChange={(e) => setShop({ ...shop, operatingHours: e.target.value })}
-                required
-              />
             </div>
 
             <Input

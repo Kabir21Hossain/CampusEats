@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { menuService } from "@/services/menu-service";
+import { menuService, shopService } from "@/services";
+import { useAuth } from "@/context/auth-context";
 import { CUISINE_CATEGORIES } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,9 +23,11 @@ import {
 import { toast } from "sonner";
 
 export default function ShopOwnerMenuPage() {
+  const { currentUser } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [shopId, setShopId] = useState(null);
 
   const [newItem, setNewItem] = useState({
     name: "",
@@ -36,17 +39,24 @@ export default function ShopOwnerMenuPage() {
     dietary: ["Halal"],
   });
 
-  const loadMenu = () => {
+  const loadMenu = async () => {
     setLoading(true);
-    menuService.listMenuItems("shop-1").then((res) => {
-      if (res.success) setItems(res.data);
+    const shopResponse = await shopService.getShopByOwner(currentUser?.id);
+    if (!shopResponse.success) {
+      setItems([]);
+      setShopId(null);
       setLoading(false);
-    });
+      return;
+    }
+    setShopId(shopResponse.data.id);
+    const menuResponse = await menuService.listMenuItems(shopResponse.data.id);
+    if (menuResponse.success) setItems(menuResponse.data);
+    setLoading(false);
   };
 
   useEffect(() => {
-    loadMenu();
-  }, []);
+    if (currentUser?.id) loadMenu();
+  }, [currentUser?.id]);
 
   const handleToggleAvailability = async (item) => {
     const res = await menuService.updateMenuItem(item.id, {
@@ -59,6 +69,8 @@ export default function ShopOwnerMenuPage() {
           : `${item.name} marked as OUT OF STOCK`
       );
       loadMenu();
+    } else {
+      toast.error(res.error.message);
     }
   };
 
@@ -68,6 +80,8 @@ export default function ShopOwnerMenuPage() {
       if (res.success) {
         toast.info("Item deleted from canteen menu.");
         loadMenu();
+      } else {
+        toast.error(res.error.message);
       }
     }
   };
@@ -81,7 +95,7 @@ export default function ShopOwnerMenuPage() {
 
     const res = await menuService.createMenuItem({
       ...newItem,
-      shopId: "shop-1",
+      shopId,
       priceBDT: Number(newItem.priceBDT),
       preparationTimeMinutes: Number(newItem.preparationTimeMinutes) || 10,
     });
@@ -99,6 +113,8 @@ export default function ShopOwnerMenuPage() {
         dietary: ["Halal"],
       });
       loadMenu();
+    } else {
+      toast.error(res.error.message);
     }
   };
 
@@ -124,7 +140,6 @@ export default function ShopOwnerMenuPage() {
           <span>Add New Menu Item</span>
         </Button>
       </div>
-
       {loading ? (
         <div className="p-12 text-center text-xs text-zinc-400">Loading menu items...</div>
       ) : items.length === 0 ? (

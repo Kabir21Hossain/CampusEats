@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { shopService } from "@/services/shop-service";
 import { formatCurrency } from "@/lib/utils";
+import { DEFAULT_DELIVERY_FEE, DEFAULT_PLATFORM_FEE } from "@/lib/constants";
 import {
   Search,
   Sparkles,
@@ -32,20 +33,38 @@ export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [shopError, setShopError] = useState("");
 
   useEffect(() => {
-    shopService.listShops().then((res) => {
-      if (res.success) setShops(res.data);
-      setLoading(false);
-    });
+    let active = true;
+    shopService.listShops()
+      .then((res) => {
+        if (!active) return;
+        if (res.success) {
+          setShops(res.data);
+        } else {
+          setShopError(res.error.message);
+        }
+      })
+      .catch((error) => {
+        if (active) setShopError(error.message || "Unable to load campus shops.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  const featuredShop = shops[0];
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/student/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
-      router.push("/student/home");
+      router.push("/search");
     }
   };
 
@@ -80,7 +99,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                  Connect with your favorite campus canteens and fellow student riders. From late-night khichuri at Shahidullah Hall to fresh burgers by TSC — fast, hot, and escrow-verified.
+                  Connect with campus canteens and fellow student riders. Browse menus publicly, then sign in when you are ready to place an order.
                 </p>
 
                 {/* Hero Search Box */}
@@ -112,7 +131,7 @@ export default function LandingPage() {
                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 pt-2 text-xs text-zinc-500 dark:text-zinc-400">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Flat ৳30 Hall Delivery</span>
+                    <span>BDT {DEFAULT_DELIVERY_FEE + DEFAULT_PLATFORM_FEE} delivery and platform fees</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -131,41 +150,41 @@ export default function LandingPage() {
                   <div className="rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-md">
                     <div className="relative h-64 sm:h-72 w-full">
                       <img
-                        src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80"
-                        alt="Campus Biryani"
+                        src={featuredShop?.bannerUrl || "/images/banner-placeholder.jpg"}
+                        alt={featuredShop?.name || "Campus food shops"}
                         className="h-full w-full object-cover"
                       />
                       <div className="absolute top-3 left-3">
                         <Badge variant="primary" size="md" className="shadow-md">
-                          ⭐ Top Campus Pick
+                          {featuredShop ? "Featured Campus Shop" : "Campus Food Shops"}
                         </Badge>
                       </div>
                       <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-medium">
                         <Clock className="h-3.5 w-3.5 text-emerald-400" />
-                        <span>25-30 Mins</span>
+                        <span>{featuredShop?.deliveryTimeMinutes ? `${featuredShop.deliveryTimeMinutes} mins` : "Browse menus"}</span>
                       </div>
                     </div>
 
                     <div className="p-5 space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-50">
-                          Khan's Shahi Biryani
+                          {featuredShop?.name || "Discover campus shops"}
                         </h4>
                         <div className="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
                           <Star className="h-3.5 w-3.5 fill-current" />
-                          <span>4.9 (512 reviews)</span>
+                          <span>{featuredShop ? `${featuredShop.rating} rating` : "Public shop browsing"}</span>
                         </div>
                       </div>
 
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Opposite Shahidullah Hall Gate • Traditional Kacchi &amp; Borhani
+                        {featuredShop?.description || "Explore menus from university food outlets without signing in."}
                       </p>
 
                       <div className="pt-2 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800">
                         <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                          Special Kacchi from <strong className="text-emerald-700 dark:text-emerald-400">৳290</strong>
+                          {featuredShop?.campusLocation || "Campus-wide"}
                         </span>
-                        <Link href="/student/shops/shop-2">
+                        <Link href={featuredShop ? `/shops/${featuredShop.id}` : "/search"}>
                           <Button variant="primary" size="sm" className="rounded-xl">
                             View Menu <ArrowRight className="h-3.5 w-3.5" />
                           </Button>
@@ -174,20 +193,6 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* Floating rider delivery badge */}
-                  <div className="absolute -bottom-5 -left-4 sm:-left-6 rounded-2xl bg-white dark:bg-zinc-900 p-3 shadow-lg border border-zinc-200 dark:border-zinc-800 flex items-center gap-3 animate-in slide-in-from-left duration-500">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
-                      <Bike className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                        Active Hall Delivery
-                      </p>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                        Rider Sabbir is 4 mins away
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -200,7 +205,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div className="space-y-1">
                 <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
-                  6+
+                  {shops.length}
                 </div>
                 <div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
                   Approved Campus Canteens
@@ -208,26 +213,26 @@ export default function LandingPage() {
               </div>
               <div className="space-y-1">
                 <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
-                  ৳30
+                  BDT {DEFAULT_DELIVERY_FEE + DEFAULT_PLATFORM_FEE}
                 </div>
                 <div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
-                  Flat Hall Delivery Fee
+                  Delivery + Platform Fees
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
-                  18 Mins
+                  Public
                 </div>
                 <div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
-                  Average Delivery Time
+                  No Login Needed to Browse
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
-                  100%
+                  Live
                 </div>
                 <div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
-                  Secure Escrow Protection
+                  Shop Data from Backend
                 </div>
               </div>
             </div>
@@ -246,16 +251,27 @@ export default function LandingPage() {
                 Discover Verified University Food Outlets
               </h2>
             </div>
-            <Link href="/student/home">
+            <Link href="/search">
               <Button variant="outline" size="sm" className="rounded-xl">
                 View All Canteens <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
 
+          {loading ? (
+            <p role="status" className="py-12 text-center text-sm text-zinc-500">Loading campus shops...</p>
+          ) : shopError ? (
+            <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+              {shopError}
+            </p>
+          ) : shops.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
+              No campus shops are available right now.
+            </p>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {shops.map((shop) => (
-              <Link key={shop.id} href={`/student/shops/${shop.id}`} className="group">
+              <Link key={shop.id} href={`/shops/${shop.id}`} className="group">
                 <Card hoverEffect className="h-full flex flex-col">
                   <div className="relative h-48 w-full overflow-hidden">
                     <img
@@ -305,6 +321,7 @@ export default function LandingPage() {
               </Link>
             ))}
           </div>
+          )}
         </section>
 
         {/* ================= ROLE PATHWAYS ================= */}
@@ -397,7 +414,7 @@ export default function LandingPage() {
                 Your payment is securely held in platform escrow until you scan the handover code at your dorm gate. Neither shop nor rider receives disbursement until food is delivered.
               </p>
               <div className="pt-2 flex flex-wrap gap-3">
-                <Link href="/student/home">
+                <Link href="/search">
                   <Button variant="primary" size="lg" className="bg-white text-emerald-900 hover:bg-emerald-50">
                     Start Ordering Food
                   </Button>

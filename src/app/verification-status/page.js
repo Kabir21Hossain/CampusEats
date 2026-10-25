@@ -15,8 +15,10 @@ function VerificationContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get("type") || "shop";
   const name = searchParams.get("name") || "Your Application";
+  const isRejected = searchParams.get("status") === "rejected";
 
   const isShop = type === "shop";
+  const isRider = type === "rider";
 
   return (
     <div className="w-full max-w-lg space-y-6">
@@ -25,10 +27,12 @@ function VerificationContent() {
           <Clock className="h-8 w-8 animate-pulse" />
         </div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          Application Under Review
+          {isRejected ? "Application Not Approved" : "Application Under Review"}
         </h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-          We have received the application for <strong>{name}</strong> and campus administrators are reviewing the credentials.
+          {isRejected
+            ? <>The application for <strong>{name}</strong> was not approved. Please contact campus support if you believe this is an error.</>
+            : <>We have received the application for <strong>{name}</strong> and campus administrators are reviewing the credentials.</>}
         </p>
       </div>
 
@@ -37,7 +41,7 @@ function VerificationContent() {
           <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
             <span className="text-xs text-zinc-500">Status</span>
             <Badge variant="amber" size="md">
-              Pending Admin Verification
+              {isRejected ? "Not Approved" : "Pending Admin Verification"}
             </Badge>
           </div>
 
@@ -46,12 +50,18 @@ function VerificationContent() {
               <FileCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-zinc-800 dark:text-zinc-200">
-                  {isShop ? "Shop & Menu Audit" : "Student Identity Verification"}
+                  {isShop
+                    ? "Shop & Menu Audit"
+                    : isRider
+                    ? "Rider Identity Verification"
+                    : "Student Identity Verification"}
                 </p>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                   {isShop
                     ? "Trade license, food safety inspection, and campus canteen location."
-                    : "Active Dhaka University enrollment and residential hall permission."}
+                    : isRider
+                    ? "Rider identity, vehicle, and preferred delivery-zone review."
+                    : "Jahangirnagar University enrollment and residential hall permission."}
                 </p>
               </div>
             </div>
