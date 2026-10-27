@@ -24,13 +24,9 @@ function normalizeMenuItem(item) {
 function normalizeOrder(order) {
   const riderUserId = order.riderUserId || order.riderId || null;
   let status = order.status;
-  if (status === "in_transit") status = ORDER_STATUS.PICKED_UP;
-  if (
-    riderUserId &&
-    ["accepted", "preparing", "ready_for_pickup"].includes(status)
-  ) {
-    status = ORDER_STATUS.CLAIMED;
-  }
+  if (status === "pending_shop_acceptance") status = ORDER_STATUS.PLACED;
+  if (status === "rider_assigned") status = ORDER_STATUS.CLAIMED;
+  if (status === "picked_up" || status === "in_transit") status = ORDER_STATUS.PICKED_UP;
 
   return {
     ...order,
@@ -55,7 +51,7 @@ function normalizeOrder(order) {
     },
     items: (order.items || []).map((item) => ({
       ...item,
-      priceAtOrder: item.priceAtOrder ?? item.price ?? 0,
+      priceAtOrder: item.priceAtOrder ?? item.unitPriceBdt ?? item.price ?? 0,
     })),
   };
 }
@@ -161,6 +157,32 @@ export const shopService = {
       ? createSuccessResponse(normalizeShop(shop))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated shop.", 502);
   },
+
+  async getPaymentSettings(shopId) {
+    const response = await apiRequest(
+      `/shops/${encodeURIComponent(shopId)}/payment-settings`
+    );
+    if (!response.success) return response;
+    const settings = responseItem(response, "paymentSettings");
+    return settings
+      ? createSuccessResponse(settings)
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned no shop payment settings.", 502);
+  },
+
+  async updatePaymentSettings(shopId, bkashNumber) {
+    const response = await apiRequest(
+      `/shops/${encodeURIComponent(shopId)}/payment-settings`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ bkashNumber }),
+      }
+    );
+    if (!response.success) return response;
+    const settings = responseItem(response, "paymentSettings");
+    return settings
+      ? createSuccessResponse(settings)
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated shop payment settings.", 502);
+  },
 };
 
 export const menuService = {
@@ -262,12 +284,15 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no created order.", 502);
   },
 
-  async updateOrderStatus(orderId, status) {
+  async updateOrderStatus(orderId, status, rejectionReason) {
     const response = await apiRequest(
       `/orders/${encodeURIComponent(orderId)}/status`,
       {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          ...(rejectionReason ? { rejectionReason } : {}),
+        }),
       }
     );
     if (!response.success) return response;
@@ -302,6 +327,28 @@ export const orderService = {
     return order
       ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no rated order.", 502);
+  },
+
+  async listPayments(orderId) {
+    const response = await apiRequest(`/payments/orders/${encodeURIComponent(orderId)}`);
+    if (!response.success) return response;
+    const payments = responseItem(response, "payments");
+    return Array.isArray(payments)
+      ? createSuccessResponse(payments)
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned invalid payment obligations.", 502);
+  },
+
+  async submitPaymentReference(orderId, obligation, reference) {
+    if (!["shop", "platform"].includes(obligation)) {
+      return createErrorResponse("INVALID_OBLIGATION", "Unsupported payment obligation.", 422);
+    }
+    return apiRequest(
+      `/payments/orders/${encodeURIComponent(orderId)}/${obligation}-reference`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reference }),
+      }
+    );
   },
 };
 
@@ -356,7 +403,7 @@ export const riderService = {
   async verifyPickup(orderId, pickupOtp) {
     const response = await apiRequest("/rider/verify-pickup", {
       method: "POST",
-      body: JSON.stringify({ orderId, pickupOtp }),
+      body: JSON.stringify({ orderId, shopHandoverCode: pickupOtp }),
     });
     if (!response.success) return response;
     const order = responseItem(response, "order");
@@ -368,13 +415,56 @@ export const riderService = {
   async verifyDelivery(orderId, deliveryCode) {
     const response = await apiRequest("/rider/verify-delivery", {
       method: "POST",
-      body: JSON.stringify({ orderId, deliveryCode }),
+      body: JSON.stringify({ orderId, studentDeliveryCode: deliveryCode }),
     });
     if (!response.success) return response;
     const order = responseItem(response, "order");
     return order
       ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no delivered order.", 502);
+  },
+};
+
+export const profileService = {
+  async getMyProfile() {
+    const response = await apiRequest("/profile/me");
+    return response.success
+      ? createSuccessResponse(responseItem(response, "profile"))
+      : response;
+  },
+
+  async updateMyProfile(fields) {
+    const response = await apiRequest("/profile/me", {
+      method: "PATCH",
+      body: JSON.stringify(fields),
+    });
+    return response.success
+      ? createSuccessResponse(responseItem(response, "profile"))
+      : response;
+  },
+};
+
+export const walletService = {
+  async getMyWallet() {
+    const response = await apiRequest("/wallet/me");
+    return response.success
+      ? createSuccessResponse(responseItem(response, "wallet"))
+      : response;
+  },
+
+  async listMyLedger({ page = 1, limit = 20 } = {}) {
+    const response = await apiRequest(`/wallet/me/ledger?page=${page}&limit=${limit}`);
+    return response.success
+      ? createSuccessResponse(responseItem(response, "entries"), responseItem(response, "meta"))
+      : response;
+  },
+
+  async requestRiderPayout(amountPaisa, idempotencyKey) {
+    return apiRequest("/wallet/me/payouts", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ amountPaisa }),
+    });
   },
 };
 
@@ -407,6 +497,50 @@ export const notificationService = {
 };
 
 export const adminService = {
+  async listPayments(status = "pending_verification") {
+    const query = status ? `?status=${encodeURIComponent(status)}&limit=100` : "?limit=100";
+    const response = await apiRequest(`/payments${query}`);
+    if (!response.success) return response;
+    const payments = responseItem(response, "payments");
+    return Array.isArray(payments)
+      ? createSuccessResponse(payments)
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid payment list.", 502);
+  },
+
+  async verifyPayment(paymentId) {
+    return apiRequest(`/payments/${encodeURIComponent(paymentId)}/verify`, {
+      method: "POST",
+    });
+  },
+
+  async rejectPayment(paymentId, reason) {
+    return apiRequest(`/payments/${encodeURIComponent(paymentId)}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  async getPaymentSettings() {
+    const response = await apiRequest("/admin/payment-settings");
+    if (!response.success) return response;
+    const settings = responseItem(response, "paymentSettings");
+    return settings
+      ? createSuccessResponse(settings)
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned no platform payment settings.", 502);
+  },
+
+  async updatePaymentSettings(bkashPlatformNumber) {
+    const response = await apiRequest("/admin/payment-settings", {
+      method: "PUT",
+      body: JSON.stringify({ bkashPlatformNumber }),
+    });
+    if (!response.success) return response;
+    const settings = responseItem(response, "paymentSettings");
+    return settings
+      ? createSuccessResponse(settings)
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated platform payment settings.", 502);
+  },
+
   async getDashboardKPIs() {
     const response = await apiRequest("/admin/overview");
     if (!response.success) return response;

@@ -50,12 +50,8 @@ Any unauthenticated user or unknown role is treated as `visitor` with restricted
 | `BETTER_AUTH_URL` | Canonical server base URL | Yes | `http://localhost:3000` |
 | `NEXT_PUBLIC_API_BASE_URL` | Client API base | Optional | `http://localhost:3000` |
 | `NEXT_PUBLIC_CURRENCY` | Currency code | No | `BDT` (৳) |
-| `SMTP_HOST` | Nodemailer SMTP host | Yes (for real email) | Test/preview mock if unconfigured |
-| `SMTP_PORT` | Nodemailer SMTP port | Yes | `587` |
-| `SMTP_SECURE` | Nodemailer SSL/TLS flag | Yes | `false` |
-| `SMTP_USER` | SMTP username | Yes (for real email) | `""` |
-| `SMTP_PASS` | SMTP password | Yes (for real email) | `""` |
-| `EMAIL_FROM` | Sender header display | Yes | `"CampusEats <no-reply@campuseats.edu.bd>"` |
+| `SENDMAIL_PATH` | Backend path to a sendmail-compatible executable | Optional | `sendmail` resolved on `PATH` |
+| `EMAIL_FROM` | Sender header display | Optional | `"CampusEats <no-reply@campuseats.edu.bd>"` |
 
 > [!IMPORTANT]
 > `.env.example` contains **placeholders only**. Real credentials and tokens must never be committed to Git. `.env.local` is ignored in `.gitignore`.
@@ -82,5 +78,5 @@ Any unauthenticated user or unknown role is treated as `visitor` with restricted
 ## 6. External Blockers & Owner Action Required
 
 1. **Production MongoDB Cluster:** Provide connection string `MONGODB_URI` for production MongoDB Atlas / server.
-2. **Production SMTP Relay:** Provide valid SMTP credentials (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`) for real external email transmission (bKash/Gmail/Amazon SES).
+2. **Production mail delivery:** Install and configure a sendmail-compatible local MTA on the backend host. The app does not provide a fake success response when the executable is unavailable.
 3. **Better Auth Secret:** Owner must generate a 32+ character high-entropy secret (`openssl rand -base64 32`) and set `BETTER_AUTH_SECRET` in production.

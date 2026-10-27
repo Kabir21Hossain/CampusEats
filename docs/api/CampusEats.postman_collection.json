@@ -1,0 +1,417 @@
+{
+  "info": {
+    "_postman_id": "f15952a4-5a8f-4fa4-90bb-e90c0699c007",
+    "name": "CampusEats API - Safe Workflow Tests",
+    "description": "Secret-free request templates for a dedicated non-production CampusEats test environment. Uses the Postman cookie jar for Better Auth sessions. See README.md in this directory before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "testRunId", "value": "replace-with-unique-test-id" },
+    { "key": "orderId", "value": "replace-after-order-create" },
+    { "key": "paymentId", "value": "replace-after-payment-list" },
+    { "key": "payoutId", "value": "replace-after-payout-request" },
+    { "key": "notificationId", "value": "replace-after-notification-list" },
+    { "key": "userId", "value": "replace-with-test-user-id" },
+    { "key": "shopId", "value": "replace-with-test-shop-id" },
+    { "key": "menuItemId", "value": "replace-with-test-menu-item-id" },
+    { "key": "deliveryCode", "value": "enter-code-shown-to-test-student" },
+    { "key": "pickupCode", "value": "enter-code-shown-to-test-shop-owner" },
+    { "key": "resetToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health and Auth",
+      "item": [
+        {
+          "name": "Health (safe diagnostics)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "Send email (admin; verified account recipient; local sendmail required)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"recipientUserId\":\"{{userId}}\",\"subject\":\"Test message\",\"text\":\"This is a test-only email.\"}" },
+            "url": "{{baseUrl}}/send-email"
+          }
+        },
+        {
+          "name": "Register test student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"student-{{testRunId}}@example.test\",\"password\":\"replace-locally\",\"name\":\"CampusEats Test Student\",\"phone\":\"01700000000\",\"role\":\"student\",\"studentId\":\"TEST-{{testRunId}}\",\"department\":\"Test\",\"hall\":\"Test Hall\",\"roomNumber\":\"1\"}" },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Sign in (repeat separately for each role)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"replace-with-test-account@example.test\",\"password\":\"replace-locally\"}" },
+            "url": "{{baseUrl}}/auth/sign-in/email"
+          }
+        },
+        {
+          "name": "Current Better Auth session",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" }
+        },
+        {
+          "name": "Better Auth get-session endpoint",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/get-session" }
+        },
+        {
+          "name": "Sign out",
+          "request": { "method": "POST", "url": "{{baseUrl}}/auth/sign-out" }
+        },
+        {
+          "name": "Request password reset (sender callback not implemented)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"test-account@example.test\",\"redirectTo\":\"http://localhost:3000/reset-password\"}" },
+            "url": "{{baseUrl}}/auth/request-password-reset"
+          }
+        },
+        {
+          "name": "Reset password (single-use token from test mailbox)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"token\":\"{{resetToken}}\",\"newPassword\":\"replace-locally-with-test-password\"}" },
+            "url": "{{baseUrl}}/auth/reset-password"
+          }
+        },
+        {
+          "name": "Request verification email (sender callback not configured yet)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"test-account@example.test\",\"callbackURL\":\"http://localhost:3000/verification-status\"}" },
+            "url": "{{baseUrl}}/auth/send-verification-email"
+          }
+        },
+        {
+          "name": "Verify email (replace token only with a disposable test token)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/verify-email?token={{resetToken}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders and Delivery",
+      "item": [
+        {
+          "name": "Create order (student)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"shopId\":\"{{shopId}}\",\"items\":[{\"id\":\"{{menuItemId}}\",\"quantity\":1}],\"deliveryLocation\":\"Test Hall, room 1\",\"deliveryNotes\":\"Test only\",\"paymentMethod\":\"bKash\"}" },
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "List orders (role-scoped)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders" }
+        },
+        {
+          "name": "Read order (participant only)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/{{orderId}}" }
+        },
+        {
+          "name": "Accept order (shop owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"status\":\"accepted\"}" },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "Start preparation (shop owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"status\":\"preparing\"}" },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "Mark ready (requires both verified payments)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"status\":\"ready_for_pickup\"}" },
+            "url": "{{baseUrl}}/orders/{{orderId}}/status"
+          }
+        },
+        {
+          "name": "Set rider online",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"isOnline\":true}" },
+            "url": "{{baseUrl}}/rider/availability"
+          }
+        },
+        {
+          "name": "List available jobs (online rider)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rider/available-orders" }
+        },
+        {
+          "name": "Claim order (online rider)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"orderId\":\"{{orderId}}\"}" },
+            "url": "{{baseUrl}}/rider/claim"
+          }
+        },
+        {
+          "name": "Verify pickup (assigned rider)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"orderId\":\"{{orderId}}\",\"shopHandoverCode\":\"{{pickupCode}}\"}" },
+            "url": "{{baseUrl}}/rider/verify-pickup"
+          }
+        },
+        {
+          "name": "Verify delivery (assigned rider)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"orderId\":\"{{orderId}}\",\"studentDeliveryCode\":\"{{deliveryCode}}\"}" },
+            "url": "{{baseUrl}}/rider/verify-delivery"
+          }
+        },
+        {
+          "name": "Cancel before rider assignment (student)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{orderId}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments, Wallet, and Payouts",
+      "item": [
+        {
+          "name": "Submit shop payment reference (test mode only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reference\":\"MOCK-SHOP-{{testRunId}}\"}" },
+            "url": "{{baseUrl}}/payments/orders/{{orderId}}/shop-reference"
+          }
+        },
+        {
+          "name": "Submit platform payment reference (test mode only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reference\":\"MOCK-PLATFORM-{{testRunId}}\"}" },
+            "url": "{{baseUrl}}/payments/orders/{{orderId}}/platform-reference"
+          }
+        },
+        {
+          "name": "List order payment obligations",
+          "request": { "method": "GET", "url": "{{baseUrl}}/payments/orders/{{orderId}}" }
+        },
+        {
+          "name": "Admin payment review queue",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/payments?page=1&limit=20&status=pending_verification" }
+        },
+        {
+          "name": "Verify payment (admin; verify trusted records only)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/payments/{{paymentId}}/verify"
+          }
+        },
+        {
+          "name": "Reject payment (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reason\":\"Test fixture does not match merchant record.\"}" },
+            "url": "{{baseUrl}}/admin/payments/{{paymentId}}/reject"
+          }
+        },
+        {
+          "name": "Own wallet summary",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wallet/me" }
+        },
+        {
+          "name": "Own ledger",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wallet/me/ledger?page=1&limit=20" }
+        },
+        {
+          "name": "Request rider payout (test funds cannot be paid out)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "payout-{{testRunId}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"amountPaisa\":20000,\"idempotencyKey\":\"payout-{{testRunId}}\"}" },
+            "url": "{{baseUrl}}/wallet/me/payouts"
+          }
+        },
+        {
+          "name": "Own payout history",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wallet/me/payouts?page=1&limit=20" }
+        },
+        {
+          "name": "Admin payout queue",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/payouts?page=1&limit=20&status=requested" }
+        },
+        {
+          "name": "Approve payout (admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/payouts/{{payoutId}}/approve"
+          }
+        },
+        {
+          "name": "Mark payout processing (admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/payouts/{{payoutId}}/processing"
+          }
+        },
+        {
+          "name": "Reject payout (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reason\":\"Test payout rejection.\"}" },
+            "url": "{{baseUrl}}/admin/payouts/{{payoutId}}/reject"
+          }
+        },
+        {
+          "name": "Mark payout failed (admin; releases reserved funds)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"reason\":\"Test payout failure; no external transfer was sent.\"}" },
+            "url": "{{baseUrl}}/admin/payouts/{{payoutId}}/fail"
+          }
+        },
+        {
+          "name": "Read-only financial reconciliation (admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/finance/reconciliation" }
+        }
+      ]
+    },
+    {
+      "name": "Notifications and Profile",
+      "item": [
+        {
+          "name": "List own notifications",
+          "request": { "method": "GET", "url": "{{baseUrl}}/notifications?page=1&limit=20" }
+        },
+        {
+          "name": "Unread count",
+          "request": { "method": "GET", "url": "{{baseUrl}}/notifications/unread-count" }
+        },
+        {
+          "name": "Mark own notification read",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/{{notificationId}}/read" }
+        },
+        {
+          "name": "Mark all own notifications read",
+          "request": { "method": "POST", "url": "{{baseUrl}}/notifications/read-all" }
+        },
+        {
+          "name": "Read own profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/profile/me" }
+        },
+        {
+          "name": "Update allowed own profile fields",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"CampusEats Test User\",\"phone\":\"01700000000\"}" },
+            "url": "{{baseUrl}}/profile/me"
+          }
+        },
+        {
+          "name": "Admin search users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users?page=1&limit=20&search=test"
+          }
+        },
+        {
+          "name": "Admin update user (allowlisted action)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"isSuspended\":true,\"reason\":\"Test-only account suspension.\"}" },
+            "url": "{{baseUrl}}/admin/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Upload valid test profile photo (choose file in Postman)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "photo", "type": "file", "src": "" }]
+            },
+            "url": "{{baseUrl}}/profile/me/photo"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authorization and Validation Checks",
+      "description": "Run with a signed-out client or the wrong-role/owner cookie jar. Expected statuses are documented in docs/api/README.md.",
+      "item": [
+        {
+          "name": "401 - protected profile while signed out",
+          "request": { "method": "GET", "url": "{{baseUrl}}/profile/me" }
+        },
+        {
+          "name": "403 - non-admin payment verification",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/payments/{{paymentId}}/verify"
+          }
+        },
+        {
+          "name": "404 - unknown order",
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders/not-a-real-order-id" }
+        },
+        {
+          "name": "409 - duplicate claim after order has been claimed",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"orderId\":\"{{orderId}}\"}" },
+            "url": "{{baseUrl}}/rider/claim"
+          }
+        },
+        {
+          "name": "422 - invalid notification pagination",
+          "request": { "method": "GET", "url": "{{baseUrl}}/notifications?page=0&limit=101" }
+        },
+        {
+          "name": "429 - rate limit (repeat only in dedicated test environment)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"orderId\":\"{{orderId}}\",\"shopHandoverCode\":\"WRONG0\"}" },
+            "url": "{{baseUrl}}/rider/verify-pickup"
+          }
+        }
+      ]
+    }
+  ]
+}

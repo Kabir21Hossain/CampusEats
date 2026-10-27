@@ -1,6 +1,6 @@
 # CampusEats — Production Deployment & Vercel Readiness Guide
 
-Assalamu Alaikum. This guide contains complete, step-by-step instructions to take CampusEats from local development to a secure, production-ready system deployed on **Vercel** and connected with **MongoDB Atlas**, **Better Auth**, and **SMTP Email**.
+Assalamu Alaikum. This guide contains complete, step-by-step instructions to take CampusEats from local development to a secure, production-ready system deployed on **Vercel** and connected with **MongoDB Atlas**, **Better Auth**, and optional local sendmail email delivery.
 
 ---
 
@@ -20,13 +20,13 @@ Assalamu Alaikum. This guide contains complete, step-by-step instructions to tak
 |    Express.js Backend API     |         |         MongoDB Atlas            |
 | (Render / Railway / VPS / VM) |<------->| (Managed Cloud Document DB)      |
 | - Atomic Rider Order Claim    |         | - Collections: users, shops,     |
-| - Dual Nodemailer Pickup Mail |         |   menuItems, orders, ledger      |
+| - Best-effort Nodemailer Pickup Mail |         |   menuItems, orders, ledger      |
 | - IDOR Guard & Escrow Ledger  |         +----------------------------------+
 +-------------------------------+                          ^
                |                                           |
                v                                           |
 +-------------------------------+                          |
-|   SMTP Mailer (Nodemailer)    |                          |
+| Local sendmail MTA (optional) |                          |
 | - Customer & Shop Owner Alert |--------------------------+
 +-------------------------------+
 ```
@@ -47,7 +47,7 @@ Before deploying, ensure you have:
 1. A **GitHub** account with this repository pushed.
 2. A **Vercel** account ([vercel.com](https://vercel.com)) linked to your GitHub.
 3. A **MongoDB Atlas** account ([mongodb.com/atlas](https://www.mongodb.com/cloud/atlas)).
-4. An **SMTP Service** account (e.g. Google Gmail App Password, Brevo, or SendGrid).
+4. For email delivery, a backend host with a configured sendmail-compatible local mail transfer agent (MTA).
 
 ---
 
@@ -97,11 +97,7 @@ test -f .env || cp .env.example .env
 | `BETTER_AUTH_SECRET` | 32+ character random secret | Generate using: `openssl rand -base64 32` |
 | `BETTER_AUTH_URL` | `https://your-domain.vercel.app` | Your Vercel production domain |
 | `NEXT_PUBLIC_APP_URL`| `https://your-domain.vercel.app` | Public frontend URL |
-| `SMTP_HOST` | `smtp.gmail.com` | SMTP Host |
-| `SMTP_PORT` | `587` | Standard TLS port |
-| `SMTP_SECURE` | `false` | `false` for port 587, `true` for 465 |
-| `SMTP_USER` | `your-email@gmail.com` | Verified SMTP email address |
-| `SMTP_PASS` | `xxxx xxxx xxxx xxxx` | Gmail 16-character App Password |
+| `SENDMAIL_PATH` | `sendmail` on `PATH` | Optional path to a sendmail-compatible executable on the backend host |
 | `EMAIL_FROM` | `"CampusEats <no-reply@campuseats.edu.bd>"` | Sender header |
 
 > [!IMPORTANT]
@@ -164,7 +160,8 @@ Output:
    - `BETTER_AUTH_SECRET`
    - `BETTER_AUTH_URL` (Set to `https://<your-project>.vercel.app`)
    - `NEXT_PUBLIC_APP_URL` (Set to `https://<your-project>.vercel.app`)
-   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
+   - `SENDMAIL_PATH` (optional; configure on the backend host, not the frontend)
+   - `EMAIL_FROM`
 5. **Click Deploy**:
    - Vercel will build the frontend, optimize assets with Turbopack, and provision serverless API routes.
    - Once deployment completes, your project will be live at `https://your-project.vercel.app`!
@@ -228,8 +225,8 @@ If you prefer running the separate Express backend as an always-on service:
   - In production, cookies must have `SameSite: "none"` and `Secure: true`.
   - Or deploy both under the same root domain with subdomains (`app.campuseats.com` and `api.campuseats.com`).
 
-### Q3: How to test Nodemailer without real email?
-- CampusEats has an automatic test fallback: if `SMTP_HOST` is unconfigured, emails are logged in development mode as `preview_fallback` with simulated message IDs.
+### Q3: How to test Nodemailer email delivery?
+- Install and configure a sendmail-compatible local mail transfer agent on the backend host. Without its executable, email endpoints return `SENDMAIL_UNAVAILABLE`; the application does not simulate successful delivery.
 
 ---
 

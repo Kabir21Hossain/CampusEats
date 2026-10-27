@@ -1,38 +1,51 @@
+import { accessSync, constants } from "node:fs";
+import path from "node:path";
 import nodemailer from "nodemailer";
 
 /**
  * CampusEats Centralized Nodemailer Service
- * Supports real SMTP delivery and automatic test/preview fallback.
+ * Uses a local sendmail-compatible mail transfer agent.
  * Strictly escapes user inputs and enforces attachment whitelist.
  */
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
-const SMTP_SECURE = process.env.SMTP_SECURE === "true";
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
+const SENDMAIL_PATH = process.env.SENDMAIL_PATH?.trim() || "sendmail";
 const EMAIL_FROM = process.env.EMAIL_FROM || "CampusEats <no-reply@campuseats.edu.bd>";
 
-// Check if SMTP credentials are provided for real delivery
-const isSmtpConfigured = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_HOST !== "localhost");
-
-let transporter = null;
-
-if (isSmtpConfigured) {
-  try {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
-  } catch (err) {
-    console.warn("[Mailer] Failed to configure SMTP transporter:", err.message);
-  }
+function resolveSendmailExecutable(command) {
+  const canExecute = (filePath) => {
+    try {
+      accessSync(filePath, constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const hasPath = command.includes("/") || command.includes("\\");
+  const extensions =
+    process.platform === "win32"
+      ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
+      : [""];
+  const candidates = hasPath
+    ? [command]
+    : (process.env.PATH || "")
+        .split(path.delimiter)
+        .filter(Boolean)
+        .flatMap((directory) =>
+          extensions.map((extension) =>
+            path.join(directory, command + extension)
+          )
+        );
+  return candidates.find(canExecute) || null;
 }
+
+const sendmailExecutable = resolveSendmailExecutable(SENDMAIL_PATH);
+const transporter = sendmailExecutable
+  ? nodemailer.createTransport({
+      sendmail: true,
+      newline: "unix",
+      path: sendmailExecutable,
+    })
+  : null;
 
 /**
  * HTML escaper to prevent email template injection / XSS.
@@ -83,63 +96,55 @@ export function validateAttachment(attachment) {
 }
 
 /**
- * Core sendMail function with audit logging and test/preview mode.
+ * Core sendMail function. Email failures must not abort business transactions.
  */
 export async function sendEmail({ to, subject, html, text, attachments = [] }) {
   if (!to || typeof to !== "string" || !to.includes("@")) {
-    console.warn("[Mailer] Skipped email: invalid recipient address", to);
     return { success: false, reason: "invalid_recipient" };
   }
-
-  // Validate attachments
-  const cleanAttachments = [];
-  for (const att of attachments) {
-    try {
-      const valid = validateAttachment(att);
-      if (valid) cleanAttachments.push(valid);
-    } catch (attErr) {
-      console.warn("[Mailer] Attachment rejected:", attErr.message);
+  if (process.env.NODE_ENV === "test" || !transporter) {
+    const reason =
+      process.env.NODE_ENV === "test" ? "test_mode" : "sendmail_unavailable";
+    if (reason === "sendmail_unavailable") {
+      console.warn("[Mailer] Sendmail is unavailable; email was not sent.");
     }
+    return {
+      success: false,
+      mode: "unavailable",
+      reason,
+    };
   }
 
+  const cleanAttachments = [];
+  for (const attachment of attachments) {
+    const valid = validateAttachment(attachment);
+    if (valid) cleanAttachments.push(valid);
+  }
+
+  const plainText = text || (html ? html.replace(/<[^>]+>/g, " ") : "");
   const mailOptions = {
     from: EMAIL_FROM,
     to: to.trim(),
-    subject: subject.trim(),
-    text: text || html.replace(/<[^>]+>/g, " "),
-    html,
+    subject: typeof subject === "string" ? subject.trim() : "",
+    text: plainText,
+    html: html || `<p>${escapeHtml(plainText)}</p>`,
     attachments: cleanAttachments,
   };
 
-  if (!isSmtpConfigured || process.env.NODE_ENV === "test") {
-    // Test / Preview mode: log outcome safely without leaking secrets
-    console.log(
-      `[Mailer: Preview Mode] Sent to: ${to} | Subject: "${subject}" | Attachments: ${cleanAttachments.length}`
-    );
-    return {
-      success: true,
-      mode: "preview",
-      messageId: `preview-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      recipient: to,
-    };
-  }
-
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[Mailer: Delivered] Sent to: ${to} | MessageId: ${info.messageId}`);
     return {
       success: true,
-      mode: "delivered",
+      mode: "sendmail_accepted",
       messageId: info.messageId,
       recipient: to,
     };
-  } catch (err) {
-    console.error(`[Mailer: Delivery Failed] To: ${to} | Error: ${err.message}`);
-    // Return structured failure rather than throwing so callers don't abort transactions
+  } catch (error) {
+    console.error("[Mailer] Sendmail delivery failed.", error.code || "unknown error");
     return {
       success: false,
       mode: "failed",
-      error: err.message,
+      reason: "sendmail_delivery_failed",
       recipient: to,
     };
   }

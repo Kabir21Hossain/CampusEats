@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogOut } from "lucide-react";
+import { PersonalBkashSettings } from "@/components/profile/personal-bkash-settings";
 
 export default function RiderProfilePage() {
   const { currentUser, isPending, logout } = useAuth();
@@ -56,15 +57,13 @@ export default function RiderProfilePage() {
             ))}
           </dl>
 
-          <p role="status" className="border-t border-zinc-100 pt-4 text-xs text-amber-700 dark:border-zinc-800 dark:text-amber-300">
-            Profile editing is not available until the backend provides a self-service profile update route.
-          </p>
           <Button type="button" variant="ghost" onClick={logout} className="text-rose-600">
             <LogOut className="mr-1.5 h-4 w-4" />
             Sign out
           </Button>
         </CardContent>
       </Card>
+      <PersonalBkashSettings />
     </div>
   );
 }

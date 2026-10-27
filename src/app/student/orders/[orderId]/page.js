@@ -36,15 +36,28 @@ export default function OrderTrackingPage({ params }) {
   const [selectedRating, setSelectedRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [paymentReferences, setPaymentReferences] = useState({});
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSubmitting, setPaymentSubmitting] = useState("");
 
   const loadOrder = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
-    const res = await orderService.getOrderById(orderId);
+    const [res, paymentResponse] = await Promise.all([
+      orderService.getOrderById(orderId),
+      orderService.listPayments(orderId),
+    ]);
     if (res.success) {
       setOrder(res.data);
       setLoadError("");
     } else {
       setLoadError(res.error?.message || "Unable to load order details.");
+    }
+    if (paymentResponse.success) {
+      setPayments(paymentResponse.data);
+      setPaymentError("");
+    } else {
+      setPaymentError(paymentResponse.error?.message || "Unable to load payment status.");
     }
     if (showLoading) setLoading(false);
   }, [orderId]);
@@ -116,6 +129,29 @@ export default function OrderTrackingPage({ params }) {
     }
   };
 
+  const handleSubmitPaymentReference = async (payment) => {
+    const reference = String(paymentReferences[payment.obligation] || "").trim();
+    if (!reference) {
+      setPaymentError("Enter the bKash transaction reference for this payment.");
+      return;
+    }
+    setPaymentSubmitting(payment.obligation);
+    setPaymentError("");
+    const result = await orderService.submitPaymentReference(
+      order.id,
+      payment.obligation,
+      reference
+    );
+    setPaymentSubmitting("");
+    if (result.success) {
+      setPaymentReferences((current) => ({ ...current, [payment.obligation]: "" }));
+      toast.success("Reference submitted. It remains pending until an administrator verifies the merchant record.");
+      await loadOrder(false);
+    } else {
+      setPaymentError(result.error?.message || "Unable to submit payment reference.");
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-16">
       {loadError && (
@@ -167,13 +203,78 @@ export default function OrderTrackingPage({ params }) {
         <OrderStatusStepper
           status={order.status}
           timestamps={order.statusTimestamps || {}}
+          rejectionReason={order.rejectionReason}
         />
       </div>
+
+      {payments.length > 0 && (
+        <Card>
+          <CardContent className="p-6 space-y-5">
+            <div>
+              <h2 className="font-bold text-zinc-900 dark:text-zinc-100">Separate bKash payments</h2>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                The transaction reference is not proof of payment. Both obligations
+                must be manually verified before the shop can offer this order for pickup.
+                Never provide your PIN or OTP.
+              </p>
+            </div>
+            {paymentError && <p role="alert" className="text-xs text-rose-600">{paymentError}</p>}
+            {payments.map((payment) => (
+              <div key={payment.id} className="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold capitalize">
+                      {payment.obligation === "shop" ? "Food amount — shop" : "Delivery + platform fees — CampusEats"}
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      BDT {(payment.amountPaisa / 100).toFixed(2)} · Send to {payment.recipient || "recipient not configured"}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-xs font-medium">
+                    {payment.status.replaceAll("_", " ")}
+                  </span>
+                </div>
+                {payment.rejectionReason && (
+                  <p className="text-xs text-rose-600">Reason: {payment.rejectionReason}</p>
+                )}
+                {["not_submitted", "rejected", "expired"].includes(payment.status) && (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <label className="sr-only" htmlFor={`payment-reference-${payment.obligation}`}>
+                      {payment.obligation} bKash transaction reference
+                    </label>
+                    <input
+                      id={`payment-reference-${payment.obligation}`}
+                      value={paymentReferences[payment.obligation] || ""}
+                      onChange={(event) =>
+                        setPaymentReferences((current) => ({
+                          ...current,
+                          [payment.obligation]: event.target.value,
+                        }))
+                      }
+                      maxLength={50}
+                      autoComplete="off"
+                      placeholder="Transaction reference"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+                    />
+                    <Button
+                      variant="primary"
+                      disabled={paymentSubmitting === payment.obligation}
+                      onClick={() => handleSubmitPaymentReference(payment)}
+                    >
+                      {paymentSubmitting === payment.obligation ? "Submitting..." : "Submit reference"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         {/* Left Side: Handover Code / Rider Card */}
         <div className="md:col-span-7 space-y-6">
-          {!isDelivered && !isCancelled && (
+          {!isDelivered && !isCancelled && order.status !== ORDER_STATUS.REJECTED && (
             <div className="space-y-4">
               <HandoverCodeDisplay
                 code={order.deliveryVerificationCode}

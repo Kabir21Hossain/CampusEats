@@ -169,7 +169,7 @@ export default function RiderActiveDeliveryPage() {
               <HandoverCodeForm
                 onVerify={handleVerifyPickup}
                 actionLabel="Verify Pickup"
-                codeLength={4}
+                codeLength={6}
               />
             </div>
           </CardContent>

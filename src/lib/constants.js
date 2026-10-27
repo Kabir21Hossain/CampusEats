@@ -17,6 +17,7 @@ export const ORDER_STATUS = {
   CLAIMED: "claimed",
   PICKED_UP: "in_transit",
   DELIVERED: "delivered",
+  REJECTED: "rejected",
   CANCELLED: "cancelled",
   DISPUTED: "disputed",
 };
@@ -29,6 +30,7 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.CLAIMED]: "Rider Assigned",
   [ORDER_STATUS.PICKED_UP]: "Out for Delivery",
   [ORDER_STATUS.DELIVERED]: "Delivered",
+  [ORDER_STATUS.REJECTED]: "Declined by Shop",
   [ORDER_STATUS.CANCELLED]: "Cancelled",
   [ORDER_STATUS.DISPUTED]: "Under Dispute",
 };
@@ -40,6 +42,7 @@ export const ORDER_STATUS_COLORS = {
   [ORDER_STATUS.CLAIMED]: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
   [ORDER_STATUS.PICKED_UP]: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800",
   [ORDER_STATUS.DELIVERED]: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  [ORDER_STATUS.REJECTED]: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800",
   [ORDER_STATUS.CANCELLED]: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800",
   [ORDER_STATUS.DISPUTED]: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800",
 };

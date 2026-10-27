@@ -6,20 +6,42 @@ import { useAuth } from "@/context/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Store, MapPin, Save, Image as ImageIcon } from "lucide-react";
+import { Store, MapPin, Save, Image as ImageIcon, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import { PersonalBkashSettings } from "@/components/profile/personal-bkash-settings";
 
 export default function ShopOwnerSettingsPage() {
   const { currentUser } = useAuth();
   const [shop, setShop] = useState(null);
+  const [bkashNumber, setBkashNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentSettingsError, setPaymentSettingsError] = useState("");
 
   useEffect(() => {
-    shopService.getShopByOwner(currentUser?.id).then((res) => {
-      if (res.success) setShop(res.data);
+    let active = true;
+    async function loadSettings() {
+      const response = await shopService.getShopByOwner(currentUser?.id);
+      if (!active) return;
+      if (!response.success) {
+        setLoading(false);
+        return;
+      }
+      setShop(response.data);
+      const paymentResponse = await shopService.getPaymentSettings(response.data.id);
+      if (!active) return;
+      if (paymentResponse.success) {
+        setBkashNumber(paymentResponse.data.bkashNumber || "");
+      } else {
+        setPaymentSettingsError(paymentResponse.error.message);
+      }
       setLoading(false);
-    });
+    }
+    if (currentUser?.id) loadSettings();
+    return () => {
+      active = false;
+    };
   }, [currentUser?.id]);
 
   const handleSave = async (e) => {
@@ -36,6 +58,21 @@ export default function ShopOwnerSettingsPage() {
       toast.success("Shop information updated successfully!");
     } else {
       toast.error(res.error.message);
+    }
+  };
+
+  const handlePaymentSave = async (e) => {
+    e.preventDefault();
+    setPaymentSaving(true);
+    setPaymentSettingsError("");
+    const response = await shopService.updatePaymentSettings(shop.id, bkashNumber);
+    setPaymentSaving(false);
+    if (response.success) {
+      setBkashNumber(response.data.bkashNumber);
+      toast.success("Shop bKash payment number saved.");
+    } else {
+      setPaymentSettingsError(response.error.message);
+      toast.error(response.error.message);
     }
   };
 
@@ -121,6 +158,51 @@ export default function ShopOwnerSettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+              Shop bKash payments
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Students use this number to pay the food portion of their order. Checkout stays unavailable until it is set.
+            </p>
+          </div>
+          <form onSubmit={handlePaymentSave} className="space-y-4">
+            <Input
+              label="Shop bKash number"
+              icon={Smartphone}
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="01XXXXXXXXX"
+              value={bkashNumber}
+              onChange={(e) => setBkashNumber(e.target.value)}
+              required
+              helperText="Enter the Bangladesh bKash account number that receives shop payments."
+            />
+            {paymentSettingsError && (
+              <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+                {paymentSettingsError}
+              </p>
+            )}
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={paymentSaving}
+                className="rounded-xl font-bold"
+              >
+                <Save className="h-4 w-4 mr-1.5" />
+                Save payment number
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      <PersonalBkashSettings />
     </div>
   );
 }

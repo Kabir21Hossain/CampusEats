@@ -64,14 +64,14 @@ export default function StudentOrdersPage() {
 
   const completedOrders = orders.filter((o) => o.status === ORDER_STATUS.DELIVERED);
   const cancelledOrders = orders.filter((o) =>
-    [ORDER_STATUS.CANCELLED].includes(o.status)
+    [ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED].includes(o.status)
   );
 
   const tabs = [
     { id: "all", label: "All Orders", count: orders.length },
     { id: "active", label: "Active Orders", count: activeOrders.length },
     { id: "completed", label: "Completed", count: completedOrders.length },
-    { id: "cancelled", label: "Cancelled", count: cancelledOrders.length },
+    { id: "cancelled", label: "Cancelled & declined", count: cancelledOrders.length },
   ];
 
   const displayedOrders =

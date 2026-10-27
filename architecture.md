@@ -1030,3 +1030,34 @@ design or frontend prototype:
 Do not block initial visual design on all decisions. Mark undecided
 behavior clearly and keep it configurable until product requirements are
 approved.
+
+------------------------------------------------------------------------
+
+## 17. Implemented backend layer map
+
+The current Express API lives in `backend/src`; Better Auth owns user,
+session, account, and verification persistence. The implementation maps to
+the MVC/service design as follows:
+
+| Layer | Current implementation |
+| --- | --- |
+| Routes | `backend/src/routes` mounts endpoints and authentication/role middleware. |
+| Controllers | `backend/src/controllers` translates HTTP requests and responses; notification handlers are the first extracted controller module. |
+| Repositories | `backend/src/repositories` owns user-scoped notification queries/updates and atomic rider job claims. |
+| Services | `backend/src/services` contains order state/response policy, order-code, notification, payment, wallet/ledger/payout, audit, and email integrations. Financial transitions are coordinated by `finance.js`. |
+| Middleware | `backend/src/middleware` resolves Better Auth sessions, roles, rate limits, and HTTP errors. |
+| Response/View layer | `serializeOrder` in `backend/src/services/order-workflow.js` limits order fields and verification codes by role and workflow stage. Other endpoints use resource-specific response DTOs. |
+| Persistence/indexes | `backend/src/config/db.js` manages MongoDB connections and idempotency, ownership-query, and workflow indexes. |
+| Tests | `backend/tests` contains isolated Node tests. External MongoDB concurrency tests must use a separately provisioned disposable database. |
+
+The notification route is intentionally thin: authentication and endpoint
+registration are in the route module, HTTP validation/response mapping is in
+`controllers/notifications.js`, and MongoDB ownership filters and
+serialization are in `repositories/notifications.js`. This is the migration
+pattern for legacy routes that still contain inline request orchestration;
+do not move financial invariants into route callbacks or duplicate the
+transaction rules in controllers.
+
+The endpoint inventory, safe Postman collection, request sequence, and
+external-integration caveats are maintained in `docs/api/README.md` and
+`docs/api/CampusEats.postman_collection.json`.

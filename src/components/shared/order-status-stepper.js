@@ -5,7 +5,7 @@ import { ORDER_STATUS } from "@/lib/constants";
 import { Check, Clock, ChefHat, Bike, PackageCheck, AlertCircle } from "lucide-react";
 import { cn, formatTime } from "@/lib/utils";
 
-export function OrderStatusStepper({ status, timestamps = {} }) {
+export function OrderStatusStepper({ status, timestamps = {}, rejectionReason = "" }) {
   const steps = [
     {
       id: ORDER_STATUS.PLACED,
@@ -73,7 +73,8 @@ export function OrderStatusStepper({ status, timestamps = {} }) {
   };
 
   const currentIndex = getStatusIndex(status);
-  const isCancelled = status === ORDER_STATUS.CANCELLED;
+  const isRejected = status === ORDER_STATUS.REJECTED;
+  const isCancelled = status === ORDER_STATUS.CANCELLED || isRejected;
 
   if (isCancelled) {
     return (
@@ -81,10 +82,10 @@ export function OrderStatusStepper({ status, timestamps = {} }) {
         <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
         <div>
           <p className="font-semibold text-sm">
-            Order Cancelled
+            {isRejected ? "Order Declined" : "Order Cancelled"}
           </p>
           <p className="text-xs text-rose-600/90 dark:text-rose-400">
-            This order is no longer active.
+            {rejectionReason || "This order is no longer active."}
           </p>
         </div>
       </div>

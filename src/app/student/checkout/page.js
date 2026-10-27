@@ -10,19 +10,14 @@ import { CAMPUS_LOCATIONS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
 import { formatCurrency } from "@/lib/utils";
 import {
   MapPin,
   CreditCard,
   ShieldCheck,
   Building,
-  CheckCircle2,
-  Lock,
   ArrowRight,
   Bike,
-  Sparkles,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
@@ -38,12 +33,7 @@ function CheckoutContent() {
   const [deliveryHall, setDeliveryHall] = useState(CAMPUS_LOCATIONS[0]);
   const [roomNumber, setRoomNumber] = useState("");
   const [deliveryNote, setDeliveryNote] = useState(noteParam);
-  const [paymentMethod, setPaymentMethod] = useState("bKash Sandbox");
-
   const [isPlacing, setIsPlacing] = useState(false);
-  const [showBkashModal, setShowBkashModal] = useState(false);
-  const [bkashPin, setBkashPin] = useState("");
-  const [pinError, setPinError] = useState("");
 
   useEffect(() => {
     if (currentUser?.hall && CAMPUS_LOCATIONS.includes(currentUser.hall)) {
@@ -65,20 +55,6 @@ function CheckoutContent() {
 
   const handleInitiateOrder = (e) => {
     e.preventDefault();
-    if (paymentMethod === "bKash Sandbox") {
-      setShowBkashModal(true);
-    } else {
-      executeOrderCreation();
-    }
-  };
-
-  const handleBkashConfirm = (e) => {
-    e.preventDefault();
-    if (!bkashPin || bkashPin.length < 4) {
-      setPinError("Please enter a valid 4-digit sandbox PIN");
-      return;
-    }
-    setShowBkashModal(false);
     executeOrderCreation();
   };
 
@@ -97,7 +73,7 @@ function CheckoutContent() {
       subtotal,
       deliveryFee,
       total,
-      paymentMethod,
+      paymentMethod: "bKash",
     };
 
     try {
@@ -190,59 +166,23 @@ function CheckoutContent() {
             </CardContent>
           </Card>
 
-          {/* Payment Method Selector */}
+          {/* Payments are submitted and verified as two independent obligations. */}
           <Card>
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <CreditCard className="h-4 w-4 text-emerald-600" />
                 <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                  Payment Method
+                  bKash payment
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* bKash */}
-                <div
-                  onClick={() => setPaymentMethod("bKash Sandbox")}
-                  className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                    paymentMethod === "bKash Sandbox"
-                      ? "border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600"
-                      : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-sm text-[#e2136e]">bKash Sandbox</span>
-                    <Badge variant="default" size="sm" className="bg-[#e2136e] text-white text-[10px]">
-                      Test Only
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    Payment is simulated. No money is transferred; a real payment integration is required before launch.
-                  </p>
-                </div>
-
-                {/* Cash on Delivery */}
-                <div
-                  onClick={() => setPaymentMethod("Cash on Delivery")}
-                  className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                    paymentMethod === "Cash on Delivery"
-                      ? "border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600"
-                      : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                      Cash on Delivery
-                    </span>
-                    <Badge variant="neutral" size="sm" className="text-[10px]">
-                      At Gate
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    Cash is due to the delivery rider. This app does not verify or record cash collection.
-                  </p>
-                </div>
-              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                After the order is created, send the food amount to the shop and
+                the delivery plus platform fees to CampusEats. Submit each
+                transaction reference separately. References stay pending until
+                an administrator verifies merchant records. Never enter your
+                bKash PIN or OTP here.
+              </p>
             </CardContent>
           </Card>
 
@@ -315,7 +255,8 @@ function CheckoutContent() {
               <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 flex items-start gap-2 text-xs text-emerald-800 dark:text-emerald-300">
                 <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
                 <span className="leading-tight">
-                  Sandbox totals only: no escrow lock, real payment, or payout is processed.
+                  Prices and fees are recalculated by the server. Order preparation
+                  cannot begin until both payment obligations are verified.
                 </span>
               </div>
             </CardContent>
@@ -323,49 +264,6 @@ function CheckoutContent() {
         </div>
       </div>
 
-      {/* bKash Sandbox Modal */}
-      <Modal
-        isOpen={showBkashModal}
-        onClose={() => setShowBkashModal(false)}
-        title="bKash Sandbox Payment Gateway"
-        description={`Authorizing payment of ${formatCurrency(total)} to CampusEats Platform`}
-      >
-        <form onSubmit={handleBkashConfirm} className="space-y-4">
-          <div className="p-3 rounded-xl bg-[#e2136e]/10 border border-[#e2136e]/20 text-xs text-[#e2136e] font-semibold text-center">
-            Simulated Sandbox Environment (Test PIN: 1234)
-          </div>
-
-          <Input
-            label="bKash Wallet Number"
-            type="text"
-            value="01712-345678"
-            disabled
-          />
-
-          <Input
-            label="Enter 4-Digit bKash PIN"
-            type="password"
-            placeholder="••••"
-            maxLength={4}
-            value={bkashPin}
-            onChange={(e) => {
-              setBkashPin(e.target.value);
-              setPinError("");
-            }}
-            error={pinError}
-            required
-          />
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            className="w-full bg-[#e2136e] hover:bg-[#c20f5e] text-white font-bold rounded-xl"
-          >
-            Confirm &amp; Lock in Escrow ({formatCurrency(total)})
-          </Button>
-        </form>
-      </Modal>
     </div>
   );
 }

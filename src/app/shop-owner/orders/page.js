@@ -60,13 +60,17 @@ export default function ShopOwnerOrdersPage() {
   };
 
   const handleReject = async (orderId) => {
-    const res = await orderService.updateOrderStatus(orderId, ORDER_STATUS.CANCELLED);
+    const res = await orderService.updateOrderStatus(
+      orderId,
+      ORDER_STATUS.REJECTED,
+      "The shop declined this order."
+    );
     if (res.success) {
       if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
-      toast.info(`Order #${orderId} was cancelled.`);
+      toast.info(`Order #${orderId} was declined.`);
       loadOrders();
     } else {
-      toast.error(res.error.message);
+      toast.error(res.error?.message || "Failed to decline order.");
     }
   };
 
@@ -79,13 +83,13 @@ export default function ShopOwnerOrdersPage() {
   );
 
   const completedOrders = orders.filter((o) =>
-    [ORDER_STATUS.DELIVERED, ORDER_STATUS.CANCELLED].includes(o.status)
+    [ORDER_STATUS.DELIVERED, ORDER_STATUS.REJECTED, ORDER_STATUS.CANCELLED].includes(o.status)
   );
 
   const tabs = [
     { id: "live", label: "Incoming & Kitchen Queue", count: liveOrders.length },
     { id: "in_transit", label: "Out with Rider", count: inTransitOrders.length },
-    { id: "history", label: "Completed & Settled", count: completedOrders.length },
+    { id: "history", label: "Order History", count: completedOrders.length },
   ];
 
   const displayedOrders =
@@ -225,15 +229,22 @@ export default function ShopOwnerOrdersPage() {
                     )}
 
                     {ord.status === ORDER_STATUS.PREPARING && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleUpdateStatus(ord.id, ORDER_STATUS.AWAITING_RIDER)}
-                        className="w-full sm:w-auto rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700"
-                      >
-                        <ChefHat className="h-3.5 w-3.5" />
-                        Mark Ready for Rider Pickup
-                      </Button>
+                      <>
+                        {ord.paymentStatus !== "verified" && (
+                          <p className="max-w-sm text-right text-[11px] text-amber-700 dark:text-amber-300">
+                            Both student payments must be submitted and manually verified by an administrator before riders can see this order.
+                          </p>
+                        )}
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(ord.id, ORDER_STATUS.AWAITING_RIDER)}
+                          className="w-full sm:w-auto rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700"
+                        >
+                          <ChefHat className="h-3.5 w-3.5" />
+                          Mark Ready for Rider Pickup
+                        </Button>
+                      </>
                     )}
 
                     {[ORDER_STATUS.AWAITING_RIDER, ORDER_STATUS.CLAIMED].includes(ord.status) && (

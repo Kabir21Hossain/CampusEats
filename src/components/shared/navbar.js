@@ -78,6 +78,8 @@ function NavbarContent() {
         { href: "/admin/shops", label: "Shop Approvals" },
         { href: "/admin/users", label: "User Directory" },
         { href: "/admin/orders", label: "Order Monitor" },
+        { href: "/admin/payments", label: "Payment Review" },
+        { href: "/admin/payment-settings", label: "Payment Settings" },
         { href: "/admin/disputes", label: "Disputes" },
       ];
     }
