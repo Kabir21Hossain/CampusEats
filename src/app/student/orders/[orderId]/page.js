@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusStepper } from "@/components/shared/order-status-stepper";
 import { HandoverCodeDisplay } from "@/components/shared/handover-code-display";
+import { OrderReviewModal } from "@/components/reviews/order-review-modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -33,9 +34,8 @@ export default function OrderTrackingPage({ params }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [selectedRating, setSelectedRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [payments, setPayments] = useState([]);
   const [paymentReferences, setPaymentReferences] = useState({});
   const [paymentError, setPaymentError] = useState("");
@@ -67,6 +67,8 @@ export default function OrderTrackingPage({ params }) {
   }, [loadOrder]);
 
   usePolling(() => loadOrder(false), 10000);
+
+  const closeRatingModal = useCallback(() => setIsRatingOpen(false), []);
 
   if (loading) {
     return (
@@ -114,15 +116,13 @@ export default function OrderTrackingPage({ params }) {
     }
   };
 
-  const handleRateOrder = async () => {
+  const handleRateOrder = async (review) => {
     setActionLoading(true);
-    const result = await orderService.rateOrder(order.id, {
-      shopRating: selectedRating,
-      reviewText,
-    });
+    const result = await orderService.rateOrder(order.id, review);
     setActionLoading(false);
     if (result.success) {
       setOrder(result.data);
+      setIsRatingOpen(false);
       toast.success("Thanks for rating your order.");
     } else {
       toast.error(result.error.message);
@@ -308,52 +308,53 @@ export default function OrderTrackingPage({ params }) {
                   <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-left text-xs space-y-1">
                     <div className="flex items-center gap-1 text-amber-500 font-bold">
                       <Star className="h-4 w-4 fill-current" />
-                      <span>Rated: {order.ratingGiven.shopRating}/5 stars</span>
+                      <span>
+                        Feedback submitted
+                        {order.ratingGiven.shopRating
+                          ? ` · Shop ${order.ratingGiven.shopRating}/5`
+                          : ""}
+                      </span>
                     </div>
-                    {order.ratingGiven.reviewText && (
+                    <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {(order.ratingGiven.foodReviews || []).map((review) => (
+                        <span key={review.menuItemId} className="rounded-full bg-white px-2.5 py-1 dark:bg-zinc-900">
+                          Food {review.rating}/5
+                        </span>
+                      ))}
+                      {order.ratingGiven.riderReview && (
+                        <span className="rounded-full bg-white px-2.5 py-1 dark:bg-zinc-900">
+                          Rider {order.ratingGiven.riderReview.rating}/5
+                        </span>
+                      )}
+                    </div>
+                    {[
+                      order.ratingGiven.shopReview,
+                      ...(order.ratingGiven.foodReviews || []),
+                      order.ratingGiven.riderReview,
+                    ]
+                      .filter((review) => review?.comment)
+                      .map((review, index) => (
+                        <p key={`${review.rating}-${index}`} className="text-zinc-600 dark:text-zinc-300 italic">
+                          “{review.comment}”
+                        </p>
+                      ))}
+                    {order.ratingGiven.reviewText && !order.ratingGiven.shopReview && (
                       <p className="text-zinc-600 dark:text-zinc-300 italic">
-                        "{order.ratingGiven.reviewText}"
+                        “{order.ratingGiven.reviewText}”
                       </p>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-xs text-zinc-500">How was your order?</p>
-                    <div className="flex justify-center gap-1" aria-label="Rate this order">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          type="button"
-                          aria-label={`${rating} star${rating === 1 ? "" : "s"}`}
-                          aria-pressed={selectedRating === rating}
-                          onClick={() => setSelectedRating(rating)}
-                          className="rounded p-1 text-amber-500"
-                        >
-                          <Star
-                            className={`h-5 w-5 ${
-                              rating <= selectedRating ? "fill-current" : ""
-                            }`}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                    <textarea
-                      value={reviewText}
-                      onChange={(event) => setReviewText(event.target.value)}
-                      maxLength={1000}
-                      rows={3}
-                      placeholder="Share feedback (optional)"
-                      className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 text-xs"
-                    />
                     <Button
                       type="button"
                       variant="primary"
                       size="sm"
-                      isLoading={actionLoading}
-                      onClick={handleRateOrder}
+                      onClick={() => setIsRatingOpen(true)}
                       className="rounded-xl"
                     >
-                      Submit Rating
+                      <Star className="h-4 w-4" />
+                      Rate your experience
                     </Button>
                   </div>
                 )}
@@ -492,6 +493,13 @@ export default function OrderTrackingPage({ params }) {
         </div>
       </div>
 
+      <OrderReviewModal
+        isOpen={isRatingOpen}
+        onClose={closeRatingModal}
+        order={order}
+        isSubmitting={actionLoading}
+        onSubmit={handleRateOrder}
+      />
     </div>
   );
 }
