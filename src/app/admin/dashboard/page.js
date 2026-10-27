@@ -7,21 +7,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { ShoppingBag, Store, Users, TrendingUp } from "lucide-react";
+import { orderService } from "@/services/order-service";
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
+  const [orders, setOrders] = useState([]);
+  const [ordersError, setOrdersError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminService.getDashboardKPIs().then((response) => {
-      if (response.success) {
-        setStats(response.data);
-      } else {
-        setError(response.error.message);
-      }
-      setLoading(false);
-    });
+    let active = true;
+    Promise.all([adminService.getDashboardKPIs(), orderService.listOrders()])
+      .then(([statsResponse, ordersResponse]) => {
+        if (!active) return;
+        if (statsResponse.success) {
+          setStats(statsResponse.data);
+        } else {
+          setError(statsResponse.error.message);
+        }
+        if (ordersResponse.success) {
+          setOrders(ordersResponse.data);
+        } else {
+          setOrdersError(ordersResponse.error.message);
+        }
+        setLoading(false);
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setError(loadError.message || "Unable to load admin dashboard data.");
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (loading) {
@@ -90,9 +110,7 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <p className="text-xs text-zinc-500">
-        Application reviews, disputes, and historical charts are not included in the documented backend API.
-      </p>
+      <DashboardAnalytics orders={orders} role="admin" error={ordersError} />
     </div>
   );
 }

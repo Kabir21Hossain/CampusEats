@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { ArrowRight, Power, ShoppingBag, Store, TrendingUp } from "lucide-react";
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
 export default function ShopOwnerDashboardPage() {
   const { currentUser } = useAuth();
@@ -176,6 +177,8 @@ export default function ShopOwnerDashboardPage() {
         </Card>
       </div>
 
+      <DashboardAnalytics orders={orders} role="shop_owner" />
+
       <Card>
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -210,7 +213,7 @@ export default function ShopOwnerDashboardPage() {
       </Card>
 
       <p className="text-xs text-zinc-500">
-        Wallet balances, payouts, and historical revenue analytics are not exposed by the backend yet.
+        Wallet balances and payouts are not exposed by the backend yet.
       </p>
     </div>
   );

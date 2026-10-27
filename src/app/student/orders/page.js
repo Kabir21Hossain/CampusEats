@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
 export default function StudentOrdersPage() {
   const { currentUser } = useAuth();
@@ -119,6 +120,9 @@ export default function StudentOrdersPage() {
       </div>
 
       {/* Tabs */}
+      {!loading && !loadError && (
+        <DashboardAnalytics orders={orders} role="student" />
+      )}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       {loadError && orders.length > 0 && (
         <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
