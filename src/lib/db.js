@@ -9,7 +9,7 @@ import {
   INITIAL_NOTIFICATIONS,
 } from "@/services/mock/mock-data";
 
-const dbName = process.env.MONGODB_DB || "campuseats";
+const dbName = process.env.MONGODB_DB?.trim() || "campuseats";
 
 let isSeeding = false;
 let isSeeded = false;
@@ -94,32 +94,23 @@ export async function checkMongoConnection() {
     if (!client) {
       return {
         connected: false,
-        database: dbName,
-        error: "MongoDB client failed to initialize.",
+        status: "degraded",
       };
     }
     const db = client.db(dbName);
     const pingResult = await db.command({ ping: 1 });
     const isOk = pingResult && pingResult.ok === 1;
 
-    let collections = [];
-    if (isOk) {
-      const colList = await db.listCollections().toArray();
-      collections = colList.map((c) => c.name);
-    }
-
     return {
       connected: isOk,
-      database: dbName,
-      ping: pingResult,
-      collections,
+      status: isOk ? "ready" : "degraded",
       timestamp: new Date().toISOString(),
     };
-  } catch (err) {
+  } catch {
     return {
       connected: false,
-      database: dbName,
-      error: err.message || "Failed to reach MongoDB server",
+      status: "degraded",
+      error: "Database unreachable",
       timestamp: new Date().toISOString(),
     };
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { adminService } from "@/services/admin-service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
 
   // Resolution modal
   const [activeDispute, setActiveDispute] = useState(null);
@@ -30,18 +32,25 @@ export default function AdminDisputesPage() {
   const [refundAmount, setRefundAmount] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
-  const loadDisputes = () => {
+  const loadDisputes = useCallback(async () => {
     setLoading(true);
-    adminService.getDisputes().then((res) => {
-      if (res.success) setDisputes(res.data);
-      else setError(res.error.message);
-      setLoading(false);
-    });
-  };
+    const response = await adminService.getDisputes({ page, limit: 20 });
+    if (response.success) {
+      setDisputes(response.data);
+      setMeta(response.meta);
+      setError("");
+      if (page > Math.max(1, response.meta.totalPages || 1)) {
+        setPage(Math.max(1, response.meta.totalPages || 1));
+      }
+    } else {
+      setError(response.error.message);
+    }
+    setLoading(false);
+  }, [page]);
 
   useEffect(() => {
     loadDisputes();
-  }, []);
+  }, [loadDisputes]);
 
   const handleOpenResolveModal = (disp) => {
     setActiveDispute(disp);
@@ -182,6 +191,14 @@ export default function AdminDisputesPage() {
           ))}
         </div>
       )}
+      <div className="flex items-center justify-between text-sm text-zinc-500">
+        <span>{meta.total} dispute(s)</span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Previous</Button>
+          <span>{page} / {Math.max(1, meta.totalPages || 1)}</span>
+          <Button variant="outline" size="sm" disabled={page >= (meta.totalPages || 1) || loading} onClick={() => setPage((value) => value + 1)}>Next</Button>
+        </div>
+      </div>
 
       {/* Resolution Decision Modal */}
       <Modal

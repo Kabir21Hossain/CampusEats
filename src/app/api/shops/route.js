@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 
+function publicShop(shop) {
+  const { bkashNumber, paymentDetails, ...safeShop } = shop;
+  return safeShop;
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -28,12 +33,13 @@ export async function GET(request) {
 
     return NextResponse.json({
       success: true,
-      data: shops,
+      data: shops.map(publicShop),
       meta: { total: shops.length },
     });
   } catch (err) {
+    console.error("[Shops API Error]:", err.name || "Error");
     return NextResponse.json(
-      { success: false, error: err.message },
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 }
     );
   }

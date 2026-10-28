@@ -126,19 +126,20 @@ The backend deliberately rejects Better Auth's direct
 
 | Method and path | Authentication / ownership | Request and side effects |
 | --- | --- | --- |
-| `POST /orders` | Student | `{shopId,items:[{id,quantity}],deliveryLocation,deliveryNotes,paymentMethod:"bKash"}`. The server calculates prices, snapshots the order, creates two payment obligations, and notifies the student/shop. Client totals are ignored. |
-| `GET /orders` | Any session | Student's orders, shop owner's shop orders, rider's assigned/eligible orders, or admin's audit list. |
-| `GET /orders/{id}` | Student/shop owner/assigned rider/admin | Reads a serialized order; code fields are role- and stage-scoped. |
-| `PATCH /orders/{id}/status` | Owning shop owner/admin | `{status:"accepted"|"rejected"|"preparing"|"ready_for_pickup",rejectionReason?}`. Legal forward transitions only; both payments must be verified before ready. |
-| `POST /orders/{id}/codes/reissue` | Order's student for `delivery`; owner for `shop_handover` | `{codeType:"delivery"|"shop_handover"}`. Generates a new scoped code and records an audit event. |
-| `POST /orders/{id}/cancel` | Owning student/admin | Cancels only before rider assignment; verified payments require manual refund review. |
+| `POST /orders` | Student | `{shopId,items:[{id,quantity}],deliveryLocation,deliveryNotes,paymentMethod:"bKash"}` plus required `Idempotency-Key`. Server validates approved/orderable shop and menu items, calculates integer-paisa prices, and transactionally creates the order and two payment obligations. An identical retry replays the safe order summary; changed intent under the same key returns `409`. Notifications follow persistence; client totals are ignored. |
+| `GET /orders` | Any session | Student's orders, shop owner's own-shop orders, a rider's assigned-order history, or admin's audit list. Unclaimed rider jobs are available only from the online-only, paginated `/rider/available-orders` endpoint. Shop owners can pass `page` (default 1), `limit` (default 50, max 100), `status`, `from=YYYY-MM-DD`, and `to=YYYY-MM-DD`; response `meta` contains pagination totals. |
+| `GET /orders/{id}` | Student/shop owner/assigned rider/admin | Reads a serialized order; the shop handover code is returned only to the owning shop owner on this detail endpoint after the order is ready and before code expiry. The delivery code is returned only to the owning student after pickup and before expiry. Riders/admins and order-list responses never disclose either code. |
+| `PATCH /orders/{id}/status` | Owning shop owner | `{status:"accepted"|"rejected"|"preparing"|"ready_for_pickup",rejectionReason?}`. Only the canonical next transition is allowed; rejecting requires a reason. Marking ready requires both verified payments and atomically issues a fresh short-lived pickup code. |
+| `POST /orders/{id}/admin-correction` | Admin | `{status,reason}`. Allows only a legal one-step shop transition or eligible cancellation, requires a reason, writes status history and audit log atomically, and requires transaction-capable MongoDB. Payment-refund completion remains in the audited payment flow. |
+| `POST /orders/{id}/codes/reissue` | Order's student for `delivery`; owner for `shop_handover` | `{codeType:"delivery"|"shop_handover"}`. Delivery codes can be reissued only after pickup; shop handover codes only while ready or rider-assigned. Reissue is rate-limited, conditionally replaces the prior code, and records an audit event. |
+| `POST /orders/{id}/cancel` | Owning student | Cancels only before rider assignment; verified payments require manual refund review. |
 | `POST /orders/{id}/rating` | Owning student, delivered order | `{shopRating:1..5,reviewText?}`. A rating is accepted once. |
 | `GET /rider/availability` | Rider | Reads current online status. |
 | `PATCH /rider/availability` | Rider | `{isOnline:boolean}`. |
-| `GET /rider/available-orders` | Online rider/admin | Lists unclaimed, ready orders. Riders must be online. |
-| `POST /rider/claim` | Online rider | `{orderId}`. One atomic conditional MongoDB update chooses the winner; other claims receive `409`. |
-| `POST /rider/verify-pickup` | Assigned rider | `{orderId,shopHandoverCode}`. Rate limited; verifies the shop code and atomically records pickup. |
-| `POST /rider/verify-delivery` | Assigned rider | `{orderId,studentDeliveryCode}`. Rate limited; verifies the student's code and settles the delivery once. |
+| `GET /rider/available-orders` | Active, approved online rider | Lists unclaimed, ready orders with bounded pagination; the feed is empty while the rider has an active delivery. |
+| `POST /rider/claim` | Active, approved online rider | `{orderId}`. The central transition service atomically assigns one rider and appends status history; a unique active-rider index enforces one active delivery per rider. |
+| `POST /rider/verify-pickup` | Assigned rider | `{orderId,shopHandoverCode}`. IP/account rate limited; verifies the unexpired shop code and atomically consumes it, records pickup/history, and issues the separate delivery code to the order. |
+| `POST /rider/verify-delivery` | Assigned rider | `{orderId,studentDeliveryCode}`. IP/account rate limited; verifies the student's unexpired code, atomically consumes it and records delivery history, then settles the delivery once. |
 
 ### Payments, wallets, payouts
 
@@ -147,21 +148,22 @@ The backend deliberately rejects Better Auth's direct
 | `POST /payments/orders/{orderId}/shop-reference` | Owning student | `{reference}`. Submits the food payment reference; remains pending manual verification. |
 | `POST /payments/orders/{orderId}/platform-reference` | Owning student | `{reference}`. Submits the separate delivery/platform reference; remains pending manual verification. |
 | `GET /payments/orders/{orderId}` | Student/order owner, shop owner, assigned rider, admin | Lists the order's two payment records. Sensitive references/metadata are removed for non-admins. |
-| `GET /payments` | Admin | Paginated payment review list; optional `status`. |
+| `GET /payments?page=1&limit=20&status=pending_verification` | Admin | Paginated payment review list. `status` may be `not_submitted`, `pending_verification`, `verified`, `rejected`, `refunded`, `expired`, or `all`; `limit` is capped at 100. Invalid filters return `422`. |
 | `POST /payments/{id}/verify` | Admin | Records an authorized manual verification against trusted merchant records and posts an idempotent pending wallet ledger credit. It is not an automated provider check or a mock-success shortcut. |
 | `POST /payments/{id}/reject` | Admin | `{reason}`. Records a safe rejection and notifies the payer. |
 | `POST /payments/{id}/refund` | Admin | `{refundReference,reason}`. Records an externally completed refund and compensating ledger entries when eligible. |
 | `GET /wallet/me` | Wallet owner | Own available/pending/reserved paisa balances. |
-| `GET /wallet/me/ledger?page=1&limit=20` | Wallet owner | Own paginated ledger. |
+| `GET /wallet/me/ledger?page=1&limit=20` | Wallet owner | Own paginated ledger. Pagination is strict and bounded. |
 | `POST /wallet/me/payouts` | Rider | `{amountPaisa,idempotencyKey}` (or `Idempotency-Key` header). Minimum 20,000 paisa; reserves funds atomically. |
-| `GET /wallet/me/payouts?page=1&limit=20` | Rider | Own payout history. |
-| `GET /admin/payouts` | Admin | Payout queue; optional `status`, pagination. |
+| `GET /wallet/me/payouts?page=1&limit=20` | Rider | Own payout history. Pagination is strict and bounded. |
+| `GET /admin/payouts?page=1&limit=20&status=requested` | Admin | Paginated payout queue; status is one of `requested`, `approved`, `processing`, `paid`, `rejected`, `failed`, or `all`. |
 | `POST /admin/payouts/{id}/approve` | Admin | Approves a requested payout. |
 | `POST /admin/payouts/{id}/reject` | Admin | `{reason}`; releases its reserved amount. |
 | `POST /admin/payouts/{id}/processing` | Admin | Records that the external payout process began. |
-| `POST /admin/payouts/{id}/mark-paid` | Admin | `{payoutReference}`; records actual external payment confirmation. |
+| `POST /admin/payouts/{id}/mark-paid` | Admin | `{payoutReference}`; records actual external payment confirmation. A normalized payout reference can be used only once; mock references are rejected. |
 | `POST /admin/payouts/{id}/fail` | Admin | `{reason}`; releases the reservation. |
-| `GET /admin/finance/reconciliation` | Admin | Read-only wallet/ledger discrepancy report; also writes an audit record for the run. |
+| `GET /admin/finance/reconciliation` | Admin | Read-only wallet/ledger discrepancy report, aggregated across posted ledger groups; also writes an audit record for the run. It identifies ledger-only balances and does not repair data. |
+| `GET /admin/audit-logs?page=1&limit=20&action=...&actorId=...&targetId=...` | Admin | Newest-first, bounded, read-only audit history with exact optional filters. |
 
 Never treat a submitted payment reference as payment proof. Without a real
 provider verification integration, a human admin must check the merchant
@@ -179,9 +181,13 @@ records. Mock references use distinct `MOCK-SHOP-...` and
 | `POST /notifications/read-all` | Any session | Marks only the caller's unread notifications as read. |
 
 Important business notifications are persisted with recipient-specific
-idempotency keys before their IDs are returned to a client. The current
-notification endpoints do not expose private payment references or handover
-codes.
+idempotency keys. Transient MongoDB write failures receive up to three
+idempotent attempts; duplicate-key races are treated as already persisted.
+There is no background outbox/worker: a notification that remains unavailable
+after retries is logged and reported unsuccessful by the notification service;
+the business operation is not rolled back. Handlers that return a
+`notificationsSent` field expose that outcome. The current notification
+endpoints do not expose private payment references or handover codes.
 
 ### Profile and administration
 
@@ -191,7 +197,10 @@ codes.
 | `PATCH /profile/me` | Any session | Updates allowlisted fields only; protected account, email, role, and balance fields are rejected. |
 | `POST /profile/me/photo` | Any session | Multipart `photo`; JPEG/PNG/WebP signature and 5 MB limit; stores in MongoDB GridFS under the caller's identity. |
 | `GET /profile/photo/{id}` | Owner/admin | Streams an authorized image with `nosniff` and private cache headers. |
-| `GET /admin/overview`, `/admin/users`, `/admin/shops`, `/admin/disputes` | Admin | Paginated/search/queue operations as applicable. |
+| `GET /admin/overview` | Admin | System overview. |
+| `GET /admin/users?page=1&limit=25&role=rider&search=...` | Admin | Bounded user directory; role/search filters are allowlisted and validated. |
+| `GET /admin/shops?page=1&limit=20` | Admin | Bounded pending shop application queue. |
+| `GET /admin/disputes?page=1&limit=20` | Admin | Bounded dispute queue. |
 | `PATCH /admin/users/{id}` | Admin | Allowlisted role/approval/suspension action; audited, sessions revoked for security changes, last-admin protection enforced. |
 | `POST /admin/shops/review` | Admin | Reviews a shop application; approved shop becomes available to its owner. |
 | `POST /admin/disputes/{id}/resolve` | Admin | Applies an audited dispute decision. |
@@ -221,10 +230,12 @@ or cookie jars for the student, shop owner, rider, and admin:
    (two clients/processes); exactly one wins and the other gets `409`.
 7. As the shop owner, read the pickup code; as the assigned rider, verify
    that six-character code. Confirm wrong, expired, and replayed codes are
-   rejected and only one pickup transition is recorded.
-8. As the student, read the delivery code. As the assigned rider, submit the
-   same code to complete delivery. Confirm one settlement and no duplicate
-   ledger entries after a retry.
+   rejected and only one pickup transition is recorded. Pickup atomically
+   issues the separate delivery code.
+8. As the student, read the delivery code only after pickup. As the assigned
+   rider, submit the student's code to complete delivery. Confirm the rider
+   never receives the code in a generic order response, and confirm one
+   settlement and no duplicate ledger entries after a retry.
 9. As the rider, read wallet/ledger/payout history, then request an amount
    above available balance and an amount below 20,000 paisa; both should fail.
    A valid request reserves funds. As admin, reject/fail a test payout and

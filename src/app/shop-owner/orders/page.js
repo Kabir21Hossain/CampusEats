@@ -23,24 +23,50 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const SHOP_ORDER_STATUS_FILTERS = [
+  { value: "pending_shop_acceptance", label: ORDER_STATUS_LABELS[ORDER_STATUS.PLACED] },
+  { value: "accepted", label: ORDER_STATUS_LABELS[ORDER_STATUS.CONFIRMED] },
+  { value: "preparing", label: ORDER_STATUS_LABELS[ORDER_STATUS.PREPARING] },
+  { value: "ready_for_pickup", label: ORDER_STATUS_LABELS[ORDER_STATUS.AWAITING_RIDER] },
+  { value: "rider_assigned", label: "Rider Assigned" },
+  { value: "picked_up", label: ORDER_STATUS_LABELS[ORDER_STATUS.PICKED_UP] },
+  { value: "delivered", label: ORDER_STATUS_LABELS[ORDER_STATUS.DELIVERED] },
+  { value: "rejected", label: ORDER_STATUS_LABELS[ORDER_STATUS.REJECTED] },
+  { value: "cancelled", label: ORDER_STATUS_LABELS[ORDER_STATUS.CANCELLED] },
+  { value: "delivery_failed", label: "Delivery Failed" },
+  { value: "refunded", label: "Refunded" },
+];
+
 export default function ShopOwnerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("live");
   const [activeQRModalOrder, setActiveQRModalOrder] = useState(null);
+  const [handoverLoadingOrderId, setHandoverLoadingOrderId] = useState("");
+  const [codeReissueLoading, setCodeReissueLoading] = useState(false);
+  const [rejectionOrderId, setRejectionOrderId] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
+  const [queueFilters, setQueueFilters] = useState({ status: "", from: "", to: "" });
 
   const loadOrders = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
-    const res = await orderService.listOrders();
+    const res = await orderService.listOrders({
+      page,
+      limit: 50,
+      ...queueFilters,
+    });
     if (res.success) {
       setOrders(res.data);
+      setPagination(res.meta);
       setLoadError("");
     } else {
       setLoadError(res.error?.message || "Unable to load the order queue.");
     }
     if (showLoading) setLoading(false);
-  }, []);
+  }, [page, queueFilters]);
 
   useEffect(() => {
     loadOrders();
@@ -59,19 +85,49 @@ export default function ShopOwnerOrdersPage() {
     }
   };
 
-  const handleReject = async (orderId) => {
+  const handleReject = async () => {
+    if (!rejectionReason.trim() || rejectionReason.trim().length > 500) return;
     const res = await orderService.updateOrderStatus(
-      orderId,
+      rejectionOrderId,
       ORDER_STATUS.REJECTED,
-      "The shop declined this order."
+      rejectionReason.trim()
     );
     if (res.success) {
       if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
-      toast.info(`Order #${orderId} was declined.`);
+      toast.info(`Order #${rejectionOrderId} was declined.`);
+      setRejectionOrderId("");
+      setRejectionReason("");
       loadOrders();
     } else {
       toast.error(res.error?.message || "Failed to decline order.");
     }
+  };
+
+  const handleShowHandoverCode = async (orderId) => {
+    setHandoverLoadingOrderId(orderId);
+    const res = await orderService.getOrderById(orderId);
+    if (res.success) {
+      setActiveQRModalOrder(res.data);
+    } else {
+      toast.error(res.error?.message || "Unable to load the pickup code.");
+    }
+    setHandoverLoadingOrderId("");
+  };
+
+  const handleReissueHandoverCode = async () => {
+    if (!activeQRModalOrder) return;
+    setCodeReissueLoading(true);
+    const result = await orderService.reissueVerificationCode(
+      activeQRModalOrder.id,
+      "shop_handover"
+    );
+    setCodeReissueLoading(false);
+    if (!result.success) {
+      toast.error(result.error?.message || "Unable to issue a new pickup code.");
+      return;
+    }
+    setActiveQRModalOrder(result.data);
+    toast.success("A new pickup code is ready.");
   };
 
   const liveOrders = orders.filter((o) =>
@@ -83,13 +139,19 @@ export default function ShopOwnerOrdersPage() {
   );
 
   const completedOrders = orders.filter((o) =>
-    [ORDER_STATUS.DELIVERED, ORDER_STATUS.REJECTED, ORDER_STATUS.CANCELLED].includes(o.status)
+    [
+      ORDER_STATUS.DELIVERED,
+      ORDER_STATUS.REJECTED,
+      ORDER_STATUS.CANCELLED,
+      "delivery_failed",
+      "refunded",
+    ].includes(o.status)
   );
 
   const tabs = [
-    { id: "live", label: "Incoming & Kitchen Queue", count: liveOrders.length },
-    { id: "in_transit", label: "Out with Rider", count: inTransitOrders.length },
-    { id: "history", label: "Order History", count: completedOrders.length },
+    { id: "live", label: "Incoming & Kitchen Queue" },
+    { id: "in_transit", label: "Out with Rider" },
+    { id: "history", label: "Order History" },
   ];
 
   const displayedOrders =
@@ -119,6 +181,55 @@ export default function ShopOwnerOrdersPage() {
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          Status
+          <select
+            value={queueFilters.status}
+            onChange={(event) => {
+              setPage(1);
+              setQueueFilters((current) => ({ ...current, status: event.target.value }));
+            }}
+            className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+          >
+            <option value="">All statuses</option>
+            {SHOP_ORDER_STATUS_FILTERS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          From date
+          <input
+            type="date"
+            value={queueFilters.from}
+            max={queueFilters.to || undefined}
+            onChange={(event) => {
+              setPage(1);
+              setQueueFilters((current) => ({ ...current, from: event.target.value }));
+            }}
+            className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          To date
+          <input
+            type="date"
+            value={queueFilters.to}
+            min={queueFilters.from || undefined}
+            onChange={(event) => {
+              setPage(1);
+              setQueueFilters((current) => ({ ...current, to: event.target.value }));
+            }}
+            className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+          />
+        </label>
+        <div className="flex items-end text-xs text-zinc-500">
+          Showing {orders.length} of {pagination.total || 0} matching orders
+        </div>
+      </div>
       {loadError && orders.length > 0 && (
         <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
           Showing the latest loaded queue. Refresh failed: {loadError}
@@ -198,7 +309,10 @@ export default function ShopOwnerOrdersPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleReject(ord.id)}
+                          onClick={() => {
+                            setRejectionOrderId(ord.id);
+                            setRejectionReason("");
+                          }}
                           className="text-xs text-rose-600 hover:bg-rose-50 flex-1 sm:flex-none"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -251,7 +365,8 @@ export default function ShopOwnerOrdersPage() {
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setActiveQRModalOrder(ord)}
+                        isLoading={handoverLoadingOrderId === ord.id}
+                        onClick={() => handleShowHandoverCode(ord.id)}
                         className="w-full sm:w-auto rounded-xl text-xs font-bold"
                       >
                         Show Shop Handover Code
@@ -272,6 +387,75 @@ export default function ShopOwnerOrdersPage() {
         </div>
       )}
 
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-zinc-200 dark:border-zinc-800 pt-4">
+          <span className="text-xs text-zinc-500">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pagination.totalPages}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Modal
+        isOpen={Boolean(rejectionOrderId)}
+        onClose={() => {
+          setRejectionOrderId("");
+          setRejectionReason("");
+        }}
+        title={`Decline order #${rejectionOrderId}`}
+        description="A clear reason will be shared with the student and included in order history."
+      >
+        <div className="space-y-4">
+          <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Rejection reason
+            <textarea
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              maxLength={500}
+              rows={4}
+              required
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              placeholder="Explain why this order cannot be accepted."
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectionOrderId("");
+                setRejectionReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              disabled={!rejectionReason.trim()}
+              onClick={handleReject}
+            >
+              Confirm decline
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Pickup code presentation modal */}
       <Modal
         isOpen={!!activeQRModalOrder}
@@ -286,6 +470,16 @@ export default function ShopOwnerOrdersPage() {
               title="Shop Handover Code"
               subtitle="Show this code to the assigned rider. They enter it in Active Delivery to confirm pickup."
             />
+            <Button
+              variant="outline"
+              size="md"
+              disabled={codeReissueLoading}
+              isLoading={codeReissueLoading}
+              onClick={handleReissueHandoverCode}
+              className="w-full rounded-xl"
+            >
+              Issue a new pickup code
+            </Button>
             <Button
               variant="outline"
               size="md"

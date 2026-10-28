@@ -1,47 +1,114 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
+import {
+  isShopOwner,
+  requireRole,
+  requireSession,
+} from "@/lib/auth-server";
+import { ROLES } from "@/lib/constants";
+
+const EDITABLE_SHOP_FIELDS = new Set([
+  "name",
+  "campusZone",
+  "location",
+  "description",
+  "cuisine",
+  "isOpen",
+  "logo",
+  "banner",
+  "bkashNumber",
+]);
+
+function publicShop(shop) {
+  const { bkashNumber, paymentDetails, ...safeShop } = shop;
+  return safeShop;
+}
 
 export async function GET(request, { params }) {
   try {
     const { shopId } = await params;
     const shopsCol = await getCollection("shops");
-    const shop = await shopsCol.findOne((s) => s.id === shopId || s.slug === shopId);
+    const shop = await shopsCol.findOne({
+      $or: [{ id: shopId }, { slug: shopId }],
+    });
 
-    if (!shop) {
+    if (!shop || shop.approvalStatus !== "approved") {
       return NextResponse.json(
         { success: false, error: "Shop not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, data: shop });
+    return NextResponse.json({ success: true, data: publicShop(shop) });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Shop Detail API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }
 
 export async function PATCH(request, { params }) {
   try {
+    const { user, errorResponse } = await requireSession(request);
+    if (errorResponse) return errorResponse;
+    const roleError = requireRole(user, [ROLES.SHOP_OWNER, ROLES.ADMIN]);
+    if (roleError) return roleError;
+
     const { shopId } = await params;
     const updates = await request.json();
     const shopsCol = await getCollection("shops");
 
-    const shop = await shopsCol.findOne((s) => s.id === shopId);
+    const shop = await shopsCol.findOne({ id: shopId });
     if (!shop) {
       return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404 });
     }
-
-    // Support toggle open status or full updates
-    let updatedPayload = updates;
-    if (updates.toggleStatus) {
-      updatedPayload = { isOpen: !shop.isOpen };
+    if (!isShopOwner(shop, user)) {
+      return NextResponse.json({ success: false, error: "Shop not found" }, { status: 404 });
     }
 
-    await shopsCol.updateOne((s) => s.id === shopId, updatedPayload);
-    const updatedShop = await shopsCol.findOne((s) => s.id === shopId);
+    if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
+      return NextResponse.json(
+        { success: false, error: "Provide shop fields to update." },
+        { status: 422 }
+      );
+    }
+    const fields = Object.keys(updates);
+    const rejectedFields = fields.filter(
+      (field) => field !== "toggleStatus" && !EDITABLE_SHOP_FIELDS.has(field)
+    );
+    if (rejectedFields.length || !fields.length) {
+      return NextResponse.json(
+        { success: false, error: "Unsupported shop fields.", fields: rejectedFields },
+        { status: 422 }
+      );
+    }
 
-    return NextResponse.json({ success: true, data: updatedShop });
+    const updatedPayload = { ...updates };
+    if (Object.hasOwn(updatedPayload, "toggleStatus")) {
+      if (updatedPayload.toggleStatus !== true || fields.length !== 1) {
+        return NextResponse.json(
+          { success: false, error: "toggleStatus must be the only update and must be true." },
+          { status: 422 }
+        );
+      }
+      delete updatedPayload.toggleStatus;
+      updatedPayload.isOpen = !shop.isOpen;
+    }
+
+    await shopsCol.updateOne(
+      { id: shopId },
+      { $set: { ...updatedPayload, updatedAt: new Date().toISOString() } }
+    );
+    const updatedShop = await shopsCol.findOne({ id: shopId });
+
+    return NextResponse.json({ success: true, data: publicShop(updatedShop) });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Shop Update API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }

@@ -201,7 +201,11 @@ export default function RiderAvailableOrdersPage() {
             Available Delivery Offers
           </h3>
           <span className="text-xs text-zinc-400">
-            {isOnline ? `${orders.length} offers ready for claim` : "Turn status Online to claim"}
+            {activeDelivery
+              ? "Complete your active delivery before claiming another offer."
+              : isOnline
+                ? `${orders.length} offers ready for claim`
+                : "Turn status Online to claim"}
           </span>
         </div>
 
@@ -222,6 +226,14 @@ export default function RiderAvailableOrdersPage() {
             description={feedError}
             actionText="Retry"
             onAction={() => loadFeed()}
+          />
+        ) : activeDelivery ? (
+          <EmptyState
+            icon={Package}
+            title="Finish your active delivery first"
+            description="You can claim another delivery after this order has been completed."
+            actionText="Continue Delivery"
+            onAction={() => router.push("/rider/active-delivery")}
           />
         ) : orders.length === 0 ? (
           <EmptyState

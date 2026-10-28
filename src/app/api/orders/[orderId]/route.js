@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
-import { requireSession } from "@/lib/auth-server";
+import {
+  isOrderParticipant,
+  isShopOwner,
+  isStudentOrderOwner,
+  requireSession,
+  serializeOrderForUser,
+} from "@/lib/auth-server";
 
 export async function GET(request, { params }) {
   try {
@@ -10,45 +16,48 @@ export async function GET(request, { params }) {
 
     const { orderId } = await params;
     const ordersCol = await getCollection("orders");
-    const order = await ordersCol.findOne((o) => o.id === orderId);
+    const order = await ordersCol.findOne({ id: orderId });
 
     if (!order) {
       return NextResponse.json({ success: false, error: "Order not found", code: "NOT_FOUND" }, { status: 404 });
     }
 
-    // IDOR Access Authorization
-    const isCustomer = order.customerUserId === user.id;
-    const isAssignedRider = order.riderUserId === user.id;
-    const isAdmin = user.role === ROLES.ADMIN;
-
-    // Check shop owner authorization
-    let isShopOwner = false;
-    if (user.role === ROLES.SHOP_OWNER) {
-      const shopsCol = await getCollection("shops");
-      const shop = await shopsCol.findOne({ id: order.shopId, ownerUserId: user.id });
-      isShopOwner = Boolean(shop);
-    }
-
-    // Riders can also view unassigned orders in confirmed/awaiting_rider status
-    const isEligibleRider =
+    const shopsCol = user.role === ROLES.SHOP_OWNER
+      ? await getCollection("shops")
+      : null;
+    const shop = shopsCol
+      ? await shopsCol.findOne({
+          $or: [{ ownerId: user.id }, { ownerUserId: user.id }],
+          id: order.shopId,
+        })
+      : null;
+    const isAvailableToRider =
       user.role === ROLES.RIDER &&
-      !order.riderUserId &&
+      (order.riderId === null || order.riderId === undefined) &&
+      (order.riderUserId === null || order.riderUserId === undefined) &&
       [ORDER_STATUS.CONFIRMED, ORDER_STATUS.AWAITING_RIDER].includes(order.status);
 
-    if (!isCustomer && !isAssignedRider && !isShopOwner && !isAdmin && !isEligibleRider) {
+    if (!isOrderParticipant(order, user, shop) && !isAvailableToRider) {
       return NextResponse.json(
         {
           success: false,
-          error: "Forbidden: You do not have permission to view this order",
-          code: "FORBIDDEN",
+          error: "Order not found",
+          code: "NOT_FOUND",
         },
-        { status: 403 }
+        { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, data: order });
+    return NextResponse.json({
+      success: true,
+      data: serializeOrderForUser(order, user),
+    });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Order Detail API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }
 
@@ -61,9 +70,24 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
     const ordersCol = await getCollection("orders");
 
-    const order = await ordersCol.findOne((o) => o.id === orderId);
+    const order = await ordersCol.findOne({ id: orderId });
     if (!order) {
       return NextResponse.json({ success: false, error: "Order not found", code: "NOT_FOUND" }, { status: 404 });
+    }
+    const shopsCol = user.role === ROLES.SHOP_OWNER
+      ? await getCollection("shops")
+      : null;
+    const shop = shopsCol
+      ? await shopsCol.findOne({
+          $or: [{ ownerId: user.id }, { ownerUserId: user.id }],
+          id: order.shopId,
+        })
+      : null;
+    if (!isOrderParticipant(order, user, shop)) {
+      return NextResponse.json(
+        { success: false, error: "Order not found", code: "NOT_FOUND" },
+        { status: 404 }
+      );
     }
 
     const now = new Date().toISOString();
@@ -73,13 +97,14 @@ export async function PATCH(request, { params }) {
     // Cancellation request
     if (body.status === ORDER_STATUS.CANCELLED || body.cancelReason) {
       // Cancellation policy: customer can cancel before pickup, or admin/shop owner can cancel
-      const isCustomer = order.customerUserId === user.id;
+      const isCustomer = isStudentOrderOwner(order, user);
       const isAdmin = user.role === ROLES.ADMIN;
+      const isShopManager = isShopOwner(shop, user);
 
-      if (!isCustomer && !isAdmin && user.role !== ROLES.SHOP_OWNER) {
+      if (!isCustomer && !isAdmin && !isShopManager) {
         return NextResponse.json(
-          { success: false, error: "Forbidden: Unauthorized to cancel this order", code: "FORBIDDEN" },
-          { status: 403 }
+          { success: false, error: "Order not found", code: "NOT_FOUND" },
+          { status: 404 }
         );
       }
 
@@ -102,12 +127,12 @@ export async function PATCH(request, { params }) {
     } else if (body.status) {
       // General status update (e.g. shop owner moving to confirmed/preparing)
       const isAdmin = user.role === ROLES.ADMIN;
-      const isShopOwner = user.role === ROLES.SHOP_OWNER;
+      const shopManager = isShopOwner(shop, user);
 
-      if (!isAdmin && !isShopOwner) {
+      if (!isAdmin && !shopManager) {
         return NextResponse.json(
-          { success: false, error: "Forbidden: Only shop managers or admins can update order status", code: "FORBIDDEN" },
-          { status: 403 }
+          { success: false, error: "Order not found", code: "NOT_FOUND" },
+          { status: 404 }
         );
       }
 
@@ -119,10 +144,10 @@ export async function PATCH(request, { params }) {
 
     // Customer rating submission
     if (body.rating || body.ratingGiven) {
-      if (order.customerUserId !== user.id && user.role !== ROLES.ADMIN) {
+      if (!isStudentOrderOwner(order, user) && user.role !== ROLES.ADMIN) {
         return NextResponse.json(
-          { success: false, error: "Only the customer who placed this order can submit ratings", code: "FORBIDDEN" },
-          { status: 403 }
+          { success: false, error: "Order not found", code: "NOT_FOUND" },
+          { status: 404 }
         );
       }
       updates.ratingGiven = {
@@ -131,11 +156,18 @@ export async function PATCH(request, { params }) {
       };
     }
 
-    await ordersCol.updateOne((o) => o.id === orderId, updates);
-    const updated = await ordersCol.findOne((o) => o.id === orderId);
+    await ordersCol.updateOne({ id: orderId }, { $set: updates });
+    const updated = await ordersCol.findOne({ id: orderId });
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({
+      success: true,
+      data: serializeOrderForUser(updated, user),
+    });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Order Update API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }

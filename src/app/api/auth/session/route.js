@@ -2,8 +2,16 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth-server";
 
 export async function GET(request) {
+  const headers = request.headers;
   try {
-    const sessionData = await getServerSession(request);
+    const sessionData = await getServerSession({ headers });
+
+    if (sessionData?.inactive) {
+      return NextResponse.json(
+        { authenticated: false, user: null, role: "visitor", code: "ACCOUNT_INACTIVE" },
+        { status: 403 }
+      );
+    }
 
     if (!sessionData || !sessionData.user) {
       return NextResponse.json({
@@ -20,9 +28,10 @@ export async function GET(request) {
       role: sessionData.user.role || "student",
     });
   } catch (err) {
+    console.error("[Auth Session Route Error]:", err.name || "Error");
     return NextResponse.json(
-      { authenticated: false, user: null, role: "visitor" },
-      { status: 200 }
+      { authenticated: false, user: null, role: "visitor", code: "AUTHENTICATION_UNAVAILABLE" },
+      { status: 500 }
     );
   }
 }

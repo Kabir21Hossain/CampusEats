@@ -35,6 +35,7 @@ export default function OrderTrackingPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [codeReissueLoading, setCodeReissueLoading] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [payments, setPayments] = useState([]);
   const [paymentReferences, setPaymentReferences] = useState({});
@@ -114,6 +115,18 @@ export default function OrderTrackingPage({ params }) {
     } else {
       toast.error(result.error.message);
     }
+  };
+
+  const handleReissueDeliveryCode = async () => {
+    setCodeReissueLoading(true);
+    const result = await orderService.reissueVerificationCode(order.id, "delivery");
+    setCodeReissueLoading(false);
+    if (!result.success) {
+      toast.error(result.error?.message || "Unable to issue a new delivery code.");
+      return;
+    }
+    setOrder(result.data);
+    toast.success("A new delivery code is ready.");
   };
 
   const handleRateOrder = async (review) => {
@@ -276,17 +289,35 @@ export default function OrderTrackingPage({ params }) {
         <div className="md:col-span-7 space-y-6">
           {!isDelivered && !isCancelled && order.status !== ORDER_STATUS.REJECTED && (
             <div className="space-y-4">
-              <HandoverCodeDisplay
-                code={order.deliveryVerificationCode}
-                title="Delivery Handover Code"
-                subtitle="When your rider arrives, show them this code. They enter it to verify delivery."
-              />
-
-              <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-center">
-                <p className="text-xs text-blue-800 dark:text-blue-300">
-                  Keep this code private until the rider is physically handing over your order. The rider must enter the matching code to complete delivery.
-                </p>
-              </div>
+              {order.status === ORDER_STATUS.PICKED_UP ? (
+                <>
+                  <HandoverCodeDisplay
+                    code={order.deliveryVerificationCode}
+                    title="Delivery Handover Code"
+                    subtitle="When your rider arrives, show them this code. They enter it to verify delivery."
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={codeReissueLoading}
+                    isLoading={codeReissueLoading}
+                    onClick={handleReissueDeliveryCode}
+                    className="w-full"
+                  >
+                    Issue a new delivery code
+                  </Button>
+                  <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-center">
+                    <p className="text-xs text-blue-800 dark:text-blue-300">
+                      Keep this code private until the rider is physically handing over your order. The rider must enter the matching code to complete delivery.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                    Your delivery handover code will appear here after the rider verifies pickup.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

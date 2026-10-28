@@ -31,13 +31,20 @@ Assalamu Alaikum. This guide contains complete, step-by-step instructions to tak
 +-------------------------------+
 ```
 
-CampusEats supports two flexible deployment models:
-1. **Separated Architecture (Recommended for High Scale)**:
+CampusEats uses the Express API as its canonical browser-facing application
+backend. The Next.js application is the UI and calls that API through
+`NEXT_PUBLIC_API_BASE_URL`.
+
+1. **Separated Architecture (Supported)**:
    - **Frontend**: Next.js App Router deployed on **Vercel**.
    - **Backend**: Express.js REST API deployed on **Render** / **Railway** / **Fly.io** (or an Ubuntu VPS).
    - **Database**: MongoDB Atlas M0 (Free) or M10 Cluster.
-2. **Unified Vercel Architecture**:
-   - The repository already contains complete Next.js Route Handlers (`src/app/api/*`) matching the Express backend endpoints, allowing zero-friction 1-click full-stack deployment directly on Vercel!
+
+The overlapping `src/app/api/*` Next.js Route Handlers are legacy paths and
+are not a complete or parity-tested substitute for the Express API. Do not
+deploy them as an alternate application backend or point clients at them for
+financial, delivery, or administrative workflows. Retire or reconcile those
+handlers before changing this source-of-truth boundary.
 
 ---
 
@@ -60,12 +67,11 @@ Before deploying, ensure you have:
    - Click **Add New Database User**.
    - Choose **Password Authentication**.
    - Set Username (e.g., `campuseats_admin`) and generate a secure password.
-   - Assign Role: **Read and write to any database**.
-4. **Configure Network Access (Crucial for Vercel)**:
+   - Assign Role: **Read and write** on the specific `campuseats` database only.
+4. **Configure Network Access**:
    - Navigate to **Security** -> **Network Access**.
-   - Click **Add IP Address**.
-   - Select **Allow Access From Anywhere** (`0.0.0.0/0`).
-   - *Note*: Vercel serverless functions rotate IP addresses dynamically; `0.0.0.0/0` is mandatory unless using a dedicated NAT gateway.
+   - Prefer a private endpoint or the hosting provider's documented static egress addresses.
+   - Do not allow `0.0.0.0/0` by default. If a deployment requires it because outbound IPs are dynamic, treat it as a documented risk and use a database account with access only to the CampusEats database.
 5. **Copy Connection String**:
    - Go to **Deployments** -> **Database** -> Click **Connect**.
    - Choose **Drivers** (Node.js).
@@ -95,10 +101,18 @@ test -f .env || cp .env.example .env
 | `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/campuseats?retryWrites=true&w=majority` | MongoDB Atlas Connection String |
 | `MONGODB_DB` | `campuseats` | Your chosen database name |
 | `BETTER_AUTH_SECRET` | 32+ character random secret | Generate using: `openssl rand -base64 32` |
-| `BETTER_AUTH_URL` | `https://your-domain.vercel.app` | Your Vercel production domain |
-| `NEXT_PUBLIC_APP_URL`| `https://your-domain.vercel.app` | Public frontend URL |
+| `BETTER_AUTH_URL` | Frontend origin in Next.js; backend origin in Express | Canonical origin serving Better Auth |
+| `NEXT_PUBLIC_API_BASE_URL` | `https://your-api-domain.example/api` | Deployed Express API URL; embedded at frontend build time |
+| `FRONTEND_URL` | `https://your-domain.example` | Exact browser origin allowed by the Express API |
+| `PORT` | Platform-assigned port or `5000` locally | Express backend only |
 | `SENDMAIL_PATH` | `sendmail` on `PATH` | Optional path to a sendmail-compatible executable on the backend host |
 | `EMAIL_FROM` | `"CampusEats <no-reply@campuseats.edu.bd>"` | Sender header |
+
+Use the same `MONGODB_URI`, `MONGODB_DB`, and `BETTER_AUTH_SECRET` for both
+server deployments. Keep `BETTER_AUTH_URL` specific to each server: the
+Next.js origin for the frontend deployment and the Express origin for the API.
+Only `NEXT_PUBLIC_API_BASE_URL` is public; never prefix database credentials
+or authentication secrets with `NEXT_PUBLIC_`.
 
 > [!IMPORTANT]
 > To generate a secure `BETTER_AUTH_SECRET` in PowerShell:
@@ -137,15 +151,9 @@ Output:
 
 ---
 
-## 6. Step 4: Deploying to Vercel (Frontend & Full-Stack)
+## 6. Step 4: Deploying the Next.js Frontend to Vercel
 
-1. **Push your code to GitHub**:
-   ```bash
-   git add .
-   git commit -m "feat: complete production ready backend, mongodb connection, and vercel deployment setup"
-   git push origin main
-   ```
-2. **Import Project into Vercel**:
+1. **Import Project into Vercel**:
    - Go to [Vercel Dashboard](https://vercel.com/dashboard) -> Click **Add New...** -> **Project**.
    - Select your `CampusEats` GitHub repository.
 3. **Configure Project Settings**:
@@ -153,24 +161,23 @@ Output:
    - **Root Directory**: `./` (leave default or select `campuseats`)
    - **Build Command**: `next build`
    - **Install Command**: `npm install`
-4. **Add Environment Variables**:
-   In the Vercel **Environment Variables** panel, add each of the variables from Step 2:
+4. **Add frontend environment variables** in the Vercel **Environment Variables** panel:
    - `MONGODB_URI`
    - `MONGODB_DB`
    - `BETTER_AUTH_SECRET`
-   - `BETTER_AUTH_URL` (Set to `https://<your-project>.vercel.app`)
-   - `NEXT_PUBLIC_APP_URL` (Set to `https://<your-project>.vercel.app`)
-   - `SENDMAIL_PATH` (optional; configure on the backend host, not the frontend)
-   - `EMAIL_FROM`
+   - `BETTER_AUTH_URL` (the Next.js frontend origin, `https://<your-project>.vercel.app`)
+   - `NEXT_PUBLIC_API_BASE_URL` (the deployed Express API origin followed by `/api`)
 5. **Click Deploy**:
-   - Vercel will build the frontend, optimize assets with Turbopack, and provision serverless API routes.
+   - Vercel builds the frontend. `NEXT_PUBLIC_API_BASE_URL` is embedded at build time, so redeploy after changing it.
    - Once deployment completes, your project will be live at `https://your-project.vercel.app`!
 
 ---
 
-## 7. Step 5: Deploying the Express Backend (Optional Microservice)
+## 7. Step 5: Deploying the Canonical Express Backend
 
-If you prefer running the separate Express backend as an always-on service:
+Deploy the Express API as a separate service. The frontend's
+`NEXT_PUBLIC_API_BASE_URL` must point to this service; it is required for the
+documented browser-to-API flow.
 
 ### Option A: Render.com (Free Web Service)
 1. Sign in to [Render.com](https://render.com).
@@ -182,16 +189,21 @@ If you prefer running the separate Express backend as an always-on service:
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
 5. Add environment variables in the Render dashboard:
-   - `PORT=5000`
+   - `NODE_ENV=production`
    - `MONGODB_URI`
+   - `MONGODB_DB`
    - `BETTER_AUTH_SECRET`
+   - `BETTER_AUTH_URL=https://<your-api-domain>`
    - `FRONTEND_URL=https://your-project.vercel.app`
+   - `PORT` (use the platform-provided value if required by the host)
 6. Click **Create Web Service**.
 
 ### Option B: Railway.app
 1. Create a new project from your GitHub repo.
 2. Select `backend` subdirectory.
 3. Add environment variables.
+   Configure the same backend variables listed for Render, including the API
+   origin in `BETTER_AUTH_URL` and the frontend origin in `FRONTEND_URL`.
 4. Railway generates an instant HTTPS endpoint (e.g. `https://campuseats-backend.up.railway.app`).
 
 ---
@@ -209,7 +221,8 @@ If you prefer running the separate Express backend as an always-on service:
 - **Navigation Guard**: `src/proxy.js` intercepts unauthorized attempts and redirects users to their appropriate portal.
 - **Server Guard**: Every backend endpoint calls `requireSession` and `requireRole`, preventing direct API manipulation or IDOR attacks.
 - **Atomic Claim**: Riders use atomic database operations (`findOneAndUpdate`) preventing double claiming.
-- **Dual Notification**: Nodemailer emails both the student and the shop owner when an order is picked up.
+- **Financial transactions**: Wallet, ledger, and payout mutations require MongoDB transactions; deploy MongoDB as a replica set or sharded cluster.
+- **Rate limits**: API request limits use in-process memory by default. Configure a shared rate-limit store before relying on them across multiple backend instances.
 
 ---
 

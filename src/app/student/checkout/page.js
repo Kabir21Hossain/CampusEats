@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/cart-context";
@@ -34,6 +34,7 @@ function CheckoutContent() {
   const [roomNumber, setRoomNumber] = useState("");
   const [deliveryNote, setDeliveryNote] = useState(noteParam);
   const [isPlacing, setIsPlacing] = useState(false);
+  const orderAttemptRef = useRef(null);
 
   useEffect(() => {
     if (currentUser?.hall && CAMPUS_LOCATIONS.includes(currentUser.hall)) {
@@ -76,9 +77,33 @@ function CheckoutContent() {
       paymentMethod: "bKash",
     };
 
+    const requestFingerprint = JSON.stringify({
+      shopId: orderPayload.shopId,
+      items: orderPayload.items.map((item) => ({
+        id: item.menuItemId,
+        quantity: item.quantity,
+      })),
+      deliveryLocation: orderPayload.deliveryAddress.trim(),
+      deliveryNotes: orderPayload.deliveryNote.trim(),
+      paymentMethod: orderPayload.paymentMethod,
+    });
+    if (orderAttemptRef.current?.fingerprint !== requestFingerprint) {
+      const idempotencyKey = window.crypto?.randomUUID?.();
+      if (!idempotencyKey) {
+        toast.error("Secure order submission is unavailable in this browser.");
+        setIsPlacing(false);
+        return;
+      }
+      orderAttemptRef.current = { fingerprint: requestFingerprint, idempotencyKey };
+    }
+
     try {
-      const res = await orderService.createOrder(orderPayload);
+      const res = await orderService.createOrder(
+        orderPayload,
+        orderAttemptRef.current.idempotencyKey
+      );
       if (res.success) {
+        orderAttemptRef.current = null;
         if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
         // Trigger celebratory confetti
         try {

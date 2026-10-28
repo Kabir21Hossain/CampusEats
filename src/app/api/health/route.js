@@ -16,9 +16,7 @@ export async function GET() {
     uptime: Math.floor(process.uptime()),
     database: {
       connected: dbHealth.connected,
-      name: dbHealth.database,
-      collectionsCount: dbHealth.collections?.length ?? 0,
-      ping: dbHealth.ping ? "ok" : "failed",
+      status: dbHealth.connected ? "ready" : "degraded",
     },
   };
 

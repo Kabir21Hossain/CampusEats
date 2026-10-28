@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { adminService } from "@/services/admin-service";
 import { shopService } from "@/services/shop-service";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,20 +27,26 @@ export default function AdminShopApprovalsPage() {
   const [existingShops, setExistingShops] = useState([]);
   const [applicationError, setApplicationError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [applicationPage, setApplicationPage] = useState(1);
+  const [applicationMeta, setApplicationMeta] = useState({ total: 0, totalPages: 0 });
 
   // Reject modal
   const [rejectingApp, setRejectingApp] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
-      adminService.getShopApplications(),
+      adminService.getShopApplications({ page: applicationPage, limit: 20 }),
       shopService.listShops(),
     ]).then(([appRes, shopRes]) => {
       if (appRes.success) {
         setApplications(appRes.data);
+        setApplicationMeta(appRes.meta);
+        if (applicationPage > Math.max(1, appRes.meta.totalPages || 1)) {
+          setApplicationPage(Math.max(1, appRes.meta.totalPages || 1));
+        }
         setApplicationError("");
       } else {
         setApplicationError(appRes.error.message);
@@ -48,11 +54,11 @@ export default function AdminShopApprovalsPage() {
       if (shopRes.success) setExistingShops(shopRes.data);
       setLoading(false);
     });
-  };
+  }, [applicationPage]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleApprove = async (app) => {
     setActionLoading(true);
@@ -197,6 +203,14 @@ export default function AdminShopApprovalsPage() {
             ))}
           </div>
         )}
+        <div className="flex items-center justify-between text-sm text-zinc-500">
+          <span>{applicationMeta.total} pending application(s)</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={applicationPage <= 1 || loading} onClick={() => setApplicationPage((value) => value - 1)}>Previous</Button>
+            <span>{applicationPage} / {Math.max(1, applicationMeta.totalPages || 1)}</span>
+            <Button variant="outline" size="sm" disabled={applicationPage >= (applicationMeta.totalPages || 1) || loading} onClick={() => setApplicationPage((value) => value + 1)}>Next</Button>
+          </div>
+        </div>
       </div>
 
       {/* Active Canteens Roster */}

@@ -15,12 +15,16 @@ const PAYMENT_STATUSES = [
   ["not_submitted", "Not submitted"],
   ["verified", "Verified"],
   ["rejected", "Rejected"],
+  ["expired", "Expired"],
+  ["refunded", "Refunded"],
   ["all", "All"],
 ];
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [status, setStatus] = useState("pending_verification");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState("");
@@ -28,15 +32,22 @@ export default function AdminPaymentsPage() {
 
   const loadPayments = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
-    const response = await adminService.listPayments(status === "all" ? "" : status);
+    const response = await adminService.listPayments(
+      status === "all" ? "" : status,
+      { page, limit: 20 }
+    );
     if (response.success) {
       setPayments(response.data);
+      setMeta(response.meta);
+      if (page > Math.max(1, response.meta.totalPages || 1)) {
+        setPage(Math.max(1, response.meta.totalPages || 1));
+      }
       setError("");
     } else {
       setError(response.error.message || "Unable to load payment reviews.");
     }
     if (showLoading) setLoading(false);
-  }, [status]);
+  }, [page, status]);
 
   useEffect(() => {
     loadPayments();
@@ -53,6 +64,7 @@ export default function AdminPaymentsPage() {
       return;
     }
     toast.success(`Payment for order #${payment.orderId} verified.`);
+    if (response.meta.notificationWarning) toast.warning(response.meta.notificationWarning);
     await loadPayments(false);
   };
 
@@ -71,6 +83,7 @@ export default function AdminPaymentsPage() {
     }
     setRejectionReasons((current) => ({ ...current, [payment.id]: "" }));
     toast.success(`Payment for order #${payment.orderId} rejected.`);
+    if (response.meta.notificationWarning) toast.warning(response.meta.notificationWarning);
     await loadPayments(false);
   };
 
@@ -106,7 +119,10 @@ export default function AdminPaymentsPage() {
             size="sm"
             variant={status === value ? "primary" : "outline"}
             aria-pressed={status === value}
-            onClick={() => setStatus(value)}
+            onClick={() => {
+              setPage(1);
+              setStatus(value);
+            }}
           >
             {label}
           </Button>
@@ -124,7 +140,7 @@ export default function AdminPaymentsPage() {
         <div className="p-12 text-center text-sm text-zinc-400">Loading payment references...</div>
       ) : payments.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-200 p-12 text-center text-sm text-zinc-500 dark:border-zinc-800">
-          No payments in this queue.
+          No payments in this queue. {meta.total > 0 ? `Showing ${meta.total} total.` : ""}
         </div>
       ) : (
         <div className="space-y-4">
@@ -213,6 +229,31 @@ export default function AdminPaymentsPage() {
             </Card>
           ))}
         </div>
+      )}
+      {!loading && !error && meta.total > 0 && (
+        <nav className="flex items-center justify-between gap-4" aria-label="Payment review pagination">
+          <p className="text-sm text-zinc-500">
+            Page {page} of {Math.max(1, meta.totalPages)} · {meta.total} payments
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || page >= meta.totalPages}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </nav>
       )}
     </div>
   );

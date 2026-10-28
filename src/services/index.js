@@ -243,14 +243,21 @@ export const menuService = {
 };
 
 export const orderService = {
-  async listOrders() {
-    const response = await apiRequest("/orders");
+  async listOrders({ page, limit, from, to, status } = {}) {
+    const query = new URLSearchParams();
+    if (page !== undefined) query.set("page", String(page));
+    if (limit !== undefined) query.set("limit", String(limit));
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    if (status) query.set("status", status);
+    const suffix = query.size ? `?${query.toString()}` : "";
+    const response = await apiRequest(`/orders${suffix}`);
     if (!response.success) return response;
     const orders = responseItem(response, "orders");
     if (!Array.isArray(orders)) {
       return createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid order list.", 502);
     }
-    return createSuccessResponse(orders.map(normalizeOrder));
+    return createSuccessResponse(orders.map(normalizeOrder), responseItem(response, "meta") || {});
   },
 
   async getOrderById(orderId) {
@@ -262,9 +269,25 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no order.", 502);
   },
 
-  async createOrder(orderPayload) {
+  async reissueVerificationCode(orderId, codeType) {
+    const response = await apiRequest(
+      `/orders/${encodeURIComponent(orderId)}/codes/reissue`,
+      {
+        method: "POST",
+        body: JSON.stringify({ codeType }),
+      }
+    );
+    if (!response.success) return response;
+    const order = responseItem(response, "order");
+    return order
+      ? createSuccessResponse(normalizeOrder(order), responseMeta(response))
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated order.", 502);
+  },
+
+  async createOrder(orderPayload, idempotencyKey) {
     const response = await apiRequest("/orders", {
       method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
       body: JSON.stringify({
         shopId: orderPayload.shopId,
         items: (orderPayload.items || []).map((item) => ({
@@ -459,6 +482,13 @@ export const walletService = {
       : response;
   },
 
+  async listMyPayouts({ page = 1, limit = 20 } = {}) {
+    const response = await apiRequest(`/wallet/me/payouts?page=${page}&limit=${limit}`);
+    return response.success
+      ? createSuccessResponse(responseItem(response, "payouts"), responseItem(response, "meta"))
+      : response;
+  },
+
   async requestRiderPayout(amountPaisa, idempotencyKey) {
     return apiRequest("/wallet/me/payouts", {
       method: "POST",
@@ -497,13 +527,51 @@ export const notificationService = {
 };
 
 export const adminService = {
-  async listPayments(status = "pending_verification") {
-    const query = status ? `?status=${encodeURIComponent(status)}&limit=100` : "?limit=100";
-    const response = await apiRequest(`/payments${query}`);
+  async listPayouts(status = "requested", { page = 1, limit = 20 } = {}) {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (status) query.set("status", status);
+    const response = await apiRequest(`/admin/payouts?${query.toString()}`);
+    if (!response.success) return response;
+    const payouts = responseItem(response, "payouts");
+    return Array.isArray(payouts)
+      ? createSuccessResponse(payouts, responseItem(response, "meta"))
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid payout list.", 502);
+  },
+
+  async transitionPayout(payoutId, action, payload = {}) {
+    return apiRequest(`/admin/payouts/${encodeURIComponent(payoutId)}/${action}`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async listAuditLogs(filters = {}, { page = 1, limit = 20 } = {}) {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    for (const [key, value] of Object.entries(filters)) {
+      if (value) query.set(key, value);
+    }
+    const response = await apiRequest(`/admin/audit-logs?${query.toString()}`);
+    if (!response.success) return response;
+    const entries = responseItem(response, "auditLogs");
+    return Array.isArray(entries)
+      ? createSuccessResponse(entries, responseItem(response, "meta"))
+      : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid audit log list.", 502);
+  },
+
+  async listPayments(status = "pending_verification", { page = 1, limit = 20 } = {}) {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (status) query.set("status", status);
+    const response = await apiRequest(`/payments?${query.toString()}`);
     if (!response.success) return response;
     const payments = responseItem(response, "payments");
     return Array.isArray(payments)
-      ? createSuccessResponse(payments)
+      ? createSuccessResponse(payments, {
+          ...(response.data?.meta || {}),
+          ...responseMeta(response),
+        })
       : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid payment list.", 502);
   },
 
@@ -558,29 +626,28 @@ export const adminService = {
     });
   },
 
-  async listUsers(role = "all") {
-    const response = await apiRequest("/admin/users");
+  async listUsers(role = "all", { page = 1, limit = 25, search = "" } = {}) {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (role && role !== "all") query.set("role", role);
+    if (search) query.set("search", search);
+    const response = await apiRequest(`/admin/users?${query.toString()}`);
     if (!response.success) return response;
     const users = responseItem(response, "users");
     if (!Array.isArray(users)) {
       return createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid user list.", 502);
     }
-    return createSuccessResponse(
-      role && role !== "all" ? users.filter((user) => user.role === role) : users
-    );
+    return createSuccessResponse(users, responseItem(response, "meta"));
   },
 
-  async toggleUserSuspension(userId) {
-    const usersResponse = await this.listUsers();
-    if (!usersResponse.success) return usersResponse;
-    const user = usersResponse.data.find((item) => item.id === userId);
-    if (!user) return createErrorResponse("NOT_FOUND", "User not found.", 404);
-
+  async toggleUserSuspension(userId, isSuspended, reason = "") {
     const response = await apiRequest(
       `/admin/users/${encodeURIComponent(userId)}`,
       {
         method: "PATCH",
-        body: JSON.stringify({ isSuspended: !user.isSuspended }),
+        body: JSON.stringify({ isSuspended, reason }),
       }
     );
     if (!response.success) return response;
@@ -590,12 +657,12 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated user.", 502);
   },
 
-  async getShopApplications() {
-    const response = await apiRequest("/admin/shops");
+  async getShopApplications({ page = 1, limit = 20 } = {}) {
+    const response = await apiRequest(`/admin/shops?page=${page}&limit=${limit}`);
     if (!response.success) return response;
     const applications = responseItem(response, "applications");
     return Array.isArray(applications)
-      ? createSuccessResponse(applications)
+      ? createSuccessResponse(applications, responseItem(response, "meta"))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned invalid shop applications.", 502);
   },
 
@@ -623,12 +690,12 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no approved user.", 502);
   },
 
-  async getDisputes() {
-    const response = await apiRequest("/admin/disputes");
+  async getDisputes({ page = 1, limit = 20 } = {}) {
+    const response = await apiRequest(`/admin/disputes?page=${page}&limit=${limit}`);
     if (!response.success) return response;
     const disputes = responseItem(response, "disputes");
     return Array.isArray(disputes)
-      ? createSuccessResponse(disputes)
+      ? createSuccessResponse(disputes, responseItem(response, "meta"))
       : createErrorResponse("INVALID_RESPONSE", "Backend returned invalid disputes.", 502);
   },
 

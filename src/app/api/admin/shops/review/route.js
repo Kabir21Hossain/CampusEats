@@ -1,12 +1,27 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
+import { requireAdminSession } from "@/lib/auth-server";
 
 export async function POST(request) {
   try {
+    const { user, errorResponse } = await requireAdminSession(request);
+    if (errorResponse) return errorResponse;
+
     const { applicationId, decision, reason } = await request.json();
+    if (
+      typeof applicationId !== "string" ||
+      !applicationId.trim() ||
+      !["approved", "rejected"].includes(decision)
+    ) {
+      return NextResponse.json(
+        { success: false, error: "A valid application and review decision are required." },
+        { status: 422 }
+      );
+    }
+
     const appsCol = await getCollection("shopApplications");
 
-    const app = await appsCol.findOne((a) => a.id === applicationId);
+    const app = await appsCol.findOne({ id: applicationId });
     if (!app) {
       return NextResponse.json({ success: false, error: "Application not found" }, { status: 404 });
     }
@@ -15,10 +30,10 @@ export async function POST(request) {
       status: decision,
       reviewReason: reason || "",
       reviewedAt: new Date().toISOString(),
-      reviewedBy: "Dr. Farhana Yasmin (Admin)",
+      reviewedBy: user.id,
     };
 
-    await appsCol.updateOne((a) => a.id === applicationId, updates);
+    await appsCol.updateOne({ id: applicationId }, { $set: updates });
 
     // If approved, add new active shop to shops collection in MongoDB
     if (decision === "approved") {
@@ -47,6 +62,10 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, message: `Application ${decision}` });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Admin Shop Review API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }

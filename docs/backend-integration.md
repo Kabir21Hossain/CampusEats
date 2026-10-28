@@ -6,6 +6,11 @@ The frontend calls the Express API directly. Set this in `.env.local` and restar
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
 ```
 
+Express is the canonical API for delivery, finance, payouts, and administrative
+operations. The overlapping Next.js Route Handlers under `src/app/api/` are
+legacy and are not assumed to implement equivalent authorization or business
+rules; do not use them as an alternate operational API.
+
 For Vercel, set `NEXT_PUBLIC_API_BASE_URL` in the **frontend** project's environment variables to one deployed backend URL followed by `/api` (for example, `https://campuseats-api.vercel.app/api`). Do not put shell fallback expressions such as `http://localhost:5000/api || https://.../api` in this variable; environment values are literal strings, not shell expressions. This value is embedded in the frontend at build time, so redeploy after changing it. Production builds fail clearly when it is missing instead of silently calling localhost.
 
 Configure MongoDB credentials and the same `BETTER_AUTH_SECRET` (at least 32 characters) in both projects. The backend's `BETTER_AUTH_URL` is its own canonical origin (for example, `http://localhost:5000` locally); `FRONTEND_URL` must exactly match the browser origin. Any valid email address can be used for student, shop-owner, and rider accounts. First-admin signup is restricted to the exact `ADMIN_BOOTSTRAP_EMAIL` configured on the backend, requires no invitation code, and is disabled after the first admin exists. For recovery when the existing admin is inaccessible, a short-lived `ADMIN_RECOVERY_TOKEN` and `ADMIN_RECOVERY_EXPIRES_AT` can authorize one new admin account through `/admin-recovery`; this does not remove existing admins. Never prefix secrets with `NEXT_PUBLIC_`.

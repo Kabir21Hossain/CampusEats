@@ -109,7 +109,10 @@
           "name": "Create order (student)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "checkout-{{testRunId}}" }
+            ],
             "body": { "mode": "raw", "raw": "{\"shopId\":\"{{shopId}}\",\"items\":[{\"id\":\"{{menuItemId}}\",\"quantity\":1}],\"deliveryLocation\":\"Test Hall, room 1\",\"deliveryNotes\":\"Test only\",\"paymentMethod\":\"bKash\"}" },
             "url": "{{baseUrl}}/orders"
           }
@@ -225,13 +228,13 @@
         },
         {
           "name": "Admin payment review queue",
-          "request": { "method": "GET", "url": "{{baseUrl}}/admin/payments?page=1&limit=20&status=pending_verification" }
+          "request": { "method": "GET", "url": "{{baseUrl}}/payments?page=1&limit=20&status=pending_verification" }
         },
         {
           "name": "Verify payment (admin; verify trusted records only)",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/admin/payments/{{paymentId}}/verify"
+            "url": "{{baseUrl}}/payments/{{paymentId}}/verify"
           }
         },
         {
@@ -240,7 +243,7 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\"reason\":\"Test fixture does not match merchant record.\"}" },
-            "url": "{{baseUrl}}/admin/payments/{{paymentId}}/reject"
+            "url": "{{baseUrl}}/payments/{{paymentId}}/reject"
           }
         },
         {
@@ -304,6 +307,15 @@
           }
         },
         {
+          "name": "Mark payout paid (admin; actual transfer reference required)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"payoutReference\":\"replace-with-real-test-transfer-reference\"}" },
+            "url": "{{baseUrl}}/admin/payouts/{{payoutId}}/mark-paid"
+          }
+        },
+        {
           "name": "Read-only financial reconciliation (admin)",
           "request": { "method": "GET", "url": "{{baseUrl}}/admin/finance/reconciliation" }
         }
@@ -358,6 +370,13 @@
           }
         },
         {
+          "name": "Admin audit history (admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/audit-logs?page=1&limit=25"
+          }
+        },
+        {
           "name": "Upload valid test profile photo (choose file in Postman)",
           "request": {
             "method": "POST",
@@ -382,7 +401,7 @@
           "name": "403 - non-admin payment verification",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/admin/payments/{{paymentId}}/verify"
+            "url": "{{baseUrl}}/payments/{{paymentId}}/verify"
           }
         },
         {

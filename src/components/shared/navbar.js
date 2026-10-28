@@ -79,6 +79,8 @@ function NavbarContent() {
         { href: "/admin/users", label: "User Directory" },
         { href: "/admin/orders", label: "Order Monitor" },
         { href: "/admin/payments", label: "Payment Review" },
+        { href: "/admin/payouts", label: "Payouts" },
+        { href: "/admin/audit-logs", label: "Audit Log" },
         { href: "/admin/payment-settings", label: "Payment Settings" },
         { href: "/admin/disputes", label: "Disputes" },
       ];

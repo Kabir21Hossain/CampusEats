@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 import { ORDER_STATUS, DEFAULT_DELIVERY_FEE, ROLES } from "@/lib/constants";
-import { requireSession, requireRole } from "@/lib/auth-server";
+import {
+  serializeOrderForUser,
+  isStudentOrderOwner,
+  requireSession,
+  requireRole,
+} from "@/lib/auth-server";
 import { sendEmail, emailTemplates } from "@/lib/email/mailer";
 
 export async function GET(request) {
@@ -20,35 +25,51 @@ export async function GET(request) {
 
     // Enforce role-based data isolation (prevent IDOR)
     if (user.role === ROLES.STUDENT) {
-      // Students can ONLY read their own orders
-      orders = orders.filter((o) => o.customerUserId === user.id);
+      orders = orders.filter((order) => isStudentOrderOwner(order, user));
     } else if (user.role === ROLES.SHOP_OWNER) {
-      // Shop owners can ONLY read orders for their own shop
       const shopsCol = await getCollection("shops");
-      const userShop = await shopsCol.findOne({ ownerUserId: user.id });
-      const allowedShopId = userShop ? userShop.id : requestedShopId;
-      orders = orders.filter((o) => o.shopId === allowedShopId);
+      const ownedShops = await shopsCol.find({
+        $or: [{ ownerId: user.id }, { ownerUserId: user.id }],
+      });
+      const ownedShopIds = new Set(ownedShops.map((shop) => shop.id));
+      orders = orders.filter(
+        (order) =>
+          ownedShopIds.has(order.shopId) ||
+          [order.shopOwnerId, order.shopOwnerUserId].includes(user.id)
+      );
     } else if (user.role === ROLES.RIDER) {
-      // Riders can see available orders OR their own active/completed deliveries
-      if (requestedStatus === ORDER_STATUS.CONFIRMED) {
-        orders = orders.filter((o) => !o.riderUserId && o.status === ORDER_STATUS.CONFIRMED);
-      } else {
-        orders = orders.filter(
-          (o) => o.riderUserId === user.id || (!o.riderUserId && [ORDER_STATUS.CONFIRMED, ORDER_STATUS.AWAITING_RIDER].includes(o.status))
-        );
-      }
+      orders = orders.filter((order) => {
+        const assigned = [order.riderId, order.riderUserId].includes(user.id);
+        const available =
+          (order.riderId === null || order.riderId === undefined) &&
+          (order.riderUserId === null || order.riderUserId === undefined) &&
+          [ORDER_STATUS.CONFIRMED, ORDER_STATUS.AWAITING_RIDER].includes(order.status);
+        return (assigned || available) &&
+          (!requestedStatus || order.status === requestedStatus);
+      });
     } else if (user.role === ROLES.ADMIN) {
       // Admins have full access with optional filters
-      if (requestedCustomer) orders = orders.filter((o) => o.customerUserId === requestedCustomer);
+      if (requestedCustomer) orders = orders.filter((o) =>
+        [o.studentId, o.customerUserId].includes(requestedCustomer)
+      );
       if (requestedShopId) orders = orders.filter((o) => o.shopId === requestedShopId);
-      if (requestedRider) orders = orders.filter((o) => o.riderUserId === requestedRider);
+      if (requestedRider) orders = orders.filter((o) =>
+        [o.riderId, o.riderUserId].includes(requestedRider)
+      );
       if (requestedStatus) orders = orders.filter((o) => o.status === requestedStatus);
     }
 
     orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    return NextResponse.json({ success: true, data: orders });
+    return NextResponse.json({
+      success: true,
+      data: orders.map((order) => serializeOrderForUser(order, user)),
+    });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Orders API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }
 
@@ -57,7 +78,7 @@ export async function POST(request) {
     const { user, errorResponse } = await requireSession(request);
     if (errorResponse) return errorResponse;
 
-    const roleErr = requireRole(user, [ROLES.STUDENT, ROLES.ADMIN]);
+    const roleErr = requireRole(user, [ROLES.STUDENT]);
     if (roleErr) return roleErr;
 
     const payload = await request.json();
@@ -119,10 +140,14 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      data: newOrder,
+      data: serializeOrderForUser(newOrder, user),
       message: "Order placed successfully and escrow locked",
     });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Orders API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { adminService } from "@/services/admin-service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,27 +23,52 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [submittedSearch, setSubmittedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
+  const [error, setError] = useState("");
 
   const [suspendingUser, setSuspendingUser] = useState(null);
   const [suspendReason, setSuspendReason] = useState("");
   const [approvingUserId, setApprovingUserId] = useState(null);
 
-  const loadUsers = () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
-    adminService.listUsers(roleFilter).then((res) => {
-      if (res.success) setUsers(res.data);
-      setLoading(false);
+    const response = await adminService.listUsers(roleFilter, {
+      page,
+      limit: 25,
+      search: submittedSearch,
     });
-  };
+    if (response.success) {
+      setUsers(response.data);
+      setMeta(response.meta);
+      setError("");
+      if (page > Math.max(1, response.meta.totalPages || 1)) {
+        setPage(Math.max(1, response.meta.totalPages || 1));
+      }
+    } else {
+      setError(response.error.message || "Unable to load users.");
+    }
+    setLoading(false);
+  }, [page, roleFilter, submittedSearch]);
 
   useEffect(() => {
     loadUsers();
-  }, [roleFilter]);
+  }, [loadUsers]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSubmittedSearch(searchQuery.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleToggleSuspension = async () => {
     if (!suspendingUser) return;
     const res = await adminService.toggleUserSuspension(
       suspendingUser.id,
+      !suspendingUser.isSuspended,
       suspendReason
     );
     if (res.success) {
@@ -75,16 +100,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((u) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      !searchQuery ||
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.studentId && u.studentId.toLowerCase().includes(q))
-    );
-  });
-
   return (
     <div className="space-y-6 pb-16 max-w-5xl mx-auto">
       <div>
@@ -104,6 +119,7 @@ export default function AdminUsersPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            maxLength={100}
             placeholder="Search by student name, ID, or email..."
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
@@ -114,7 +130,10 @@ export default function AdminUsersPage() {
             <button
               key={r}
               type="button"
-              onClick={() => setRoleFilter(r)}
+              onClick={() => {
+                setRoleFilter(r);
+                setPage(1);
+              }}
               className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all uppercase text-[10px] ${
                 roleFilter === r
                   ? "bg-purple-700 text-white shadow-xs font-bold"
@@ -132,7 +151,9 @@ export default function AdminUsersPage() {
         <CardContent className="p-6">
           {loading ? (
             <div className="py-12 text-center text-xs text-zinc-400">Loading user directory...</div>
-          ) : filteredUsers.length === 0 ? (
+          ) : error ? (
+            <div role="alert" className="py-12 text-center text-xs text-rose-700">{error}</div>
+          ) : users.length === 0 ? (
             <div className="py-12 text-center text-xs text-zinc-400">No users match query.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -147,7 +168,7 @@ export default function AdminUsersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                  {filteredUsers.map((u) => (
+                  {users.map((u) => (
                     <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
                       <td className="py-3 flex items-center gap-3">
                         <img
@@ -239,6 +260,14 @@ export default function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
+      <div className="flex items-center justify-between text-sm text-zinc-500">
+        <span>{meta.total} user(s)</span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Previous</Button>
+          <span>{page} / {Math.max(1, meta.totalPages || 1)}</span>
+          <Button variant="outline" size="sm" disabled={page >= (meta.totalPages || 1) || loading} onClick={() => setPage((value) => value + 1)}>Next</Button>
+        </div>
+      </div>
 
       {/* Suspend / Reinstate Modal */}
       <Modal

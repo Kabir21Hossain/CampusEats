@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 import { ORDER_STATUS } from "@/lib/constants";
+import { requireAdminSession } from "@/lib/auth-server";
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const { errorResponse } = await requireAdminSession(request);
+    if (errorResponse) return errorResponse;
+
     const ordersCol = await getCollection("orders");
     const shopsCol = await getCollection("shops");
-    const usersCol = await getCollection("users");
+    const usersCol = await getCollection("user");
     const appsCol = await getCollection("shopApplications");
     const disputesCol = await getCollection("disputes");
 
@@ -34,6 +38,10 @@ export async function GET() {
       },
     });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Admin KPI API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }

@@ -4,7 +4,7 @@ import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { client } from "./mongodb.js";
 import { ROLES } from "./constants.js";
 
-const dbName = process.env.MONGODB_DB || "campuseats";
+const dbName = process.env.MONGODB_DB?.trim() || "campuseats";
 const db = client.db(dbName);
 const authSecret = process.env.BETTER_AUTH_SECRET;
 

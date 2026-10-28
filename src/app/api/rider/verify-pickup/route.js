@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
-import { requireSession, requireRole } from "@/lib/auth-server";
+import {
+  isAssignedRider,
+  requireSession,
+  requireRole,
+  serializeOrderForUser,
+  userIdFilter,
+} from "@/lib/auth-server";
 import { sendEmail, emailTemplates } from "@/lib/email/mailer";
 
 export async function POST(request) {
@@ -24,8 +30,15 @@ export async function POST(request) {
     }
 
     const ordersCol = await getCollection("orders");
-    const order = await ordersCol.findOne((o) => o.id === orderId);
+    const order = await ordersCol.findOne({ id: orderId });
     if (!order) {
+      return NextResponse.json(
+        { success: false, error: "Order not found", code: "NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    if (!isAssignedRider(order, user)) {
       return NextResponse.json(
         { success: false, error: "Order not found", code: "NOT_FOUND" },
         { status: 404 }
@@ -41,18 +54,6 @@ export async function POST(request) {
           code: "INVALID_STATE_TRANSITION",
         },
         { status: 409 }
-      );
-    }
-
-    // Authorization: only the assigned rider (or admin) can pickup
-    if (user.role !== ROLES.ADMIN && order.riderUserId && order.riderUserId !== user.id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden: You are not the assigned rider for this delivery",
-          code: "FORBIDDEN",
-        },
-        { status: 403 }
       );
     }
 
@@ -77,18 +78,18 @@ export async function POST(request) {
       },
     };
 
-    await ordersCol.updateOne((o) => o.id === orderId, updates);
-    const updated = await ordersCol.findOne((o) => o.id === orderId);
+    await ordersCol.updateOne({ id: orderId }, { $set: updates });
+    const updated = await ordersCol.findOne({ id: orderId });
 
     // Trusted dual-notification: Customer + Shop Owner
     // Enqueue asynchronously so email issues do not fail the order update
     (async () => {
       try {
-        const usersCol = await getCollection("users");
+        const usersCol = await getCollection("user");
         const shopsCol = await getCollection("shops");
 
         // 1. Customer record
-        const customer = await usersCol.findOne((u) => u.id === order.customerUserId);
+        const customer = await usersCol.findOne(userIdFilter(order.customerUserId));
         if (customer?.email) {
           const custEmail = emailTemplates.orderPickedUpCustomer(updated, customer, user);
           await sendEmail({
@@ -99,9 +100,10 @@ export async function POST(request) {
         }
 
         // 2. Shop Owner record
-        const shop = await shopsCol.findOne((s) => s.id === order.shopId);
-        if (shop?.ownerUserId) {
-          const shopOwner = await usersCol.findOne((u) => u.id === shop.ownerUserId);
+        const shop = await shopsCol.findOne({ id: order.shopId });
+        const shopOwnerId = shop?.ownerId || shop?.ownerUserId;
+        if (shopOwnerId) {
+          const shopOwner = await usersCol.findOne(userIdFilter(shopOwnerId));
           if (shopOwner?.email) {
             const shopEmail = emailTemplates.orderPickedUpShopOwner(updated, shopOwner, user);
             await sendEmail({
@@ -116,8 +118,15 @@ export async function POST(request) {
       }
     })();
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({
+      success: true,
+      data: serializeOrderForUser(updated, user),
+    });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Rider Pickup API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }

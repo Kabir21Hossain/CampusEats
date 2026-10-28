@@ -1,30 +1,63 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/campuseats";
-
-if (!process.env.MONGODB_URI) {
-  console.warn("[MongoDB Warning] MONGODB_URI environment variable is not defined in process.env. Ensure .env.local is loaded.");
+const configuredUri = process.env.MONGODB_URI?.trim();
+if (!configuredUri && process.env.NODE_ENV === "production") {
+  throw new Error("MONGODB_URI must be configured for the production application.");
 }
 
+const uri = configuredUri || "mongodb://127.0.0.1:27017";
 const options = {
+  maxPoolSize: 10,
+  minPoolSize: 0,
+  maxIdleTimeMS: 60000,
   serverSelectionTimeoutMS: 5000,
   connectTimeoutMS: 10000,
 };
 
-let client;
-let clientPromise;
+let client = null;
+let clientPromise = null;
+
+function createConnection(onFailure) {
+  const newClient = new MongoClient(uri, options);
+  const promise = newClient.connect().catch((error) => {
+    onFailure(newClient);
+    console.error(`[MongoDB] Connection failure (${error.name || "Error"}).`);
+    newClient.close().catch((closeError) => {
+      console.warn(
+        `[MongoDB] Could not close failed connection (${closeError.name || "Error"}).`
+      );
+    });
+    const connectionError = new Error(
+      "MongoDB connection failed. Verify MONGODB_URI and network access."
+    );
+    connectionError.name = "MongoConnectionError";
+    throw connectionError;
+  });
+  return { client: newClient, promise };
+}
 
 if (process.env.NODE_ENV === "development") {
   if (!globalThis._mongoClientPromise) {
-    client = new MongoClient(uri || "mongodb://localhost:27017/campuseats", options);
-    globalThis._mongoClient = client;
-    globalThis._mongoClientPromise = client.connect();
+    const connection = createConnection((failedClient) => {
+      if (globalThis._mongoClient === failedClient) {
+        delete globalThis._mongoClient;
+        delete globalThis._mongoClientPromise;
+      }
+    });
+    globalThis._mongoClient = connection.client;
+    globalThis._mongoClientPromise = connection.promise;
   }
   client = globalThis._mongoClient;
   clientPromise = globalThis._mongoClientPromise;
 } else {
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  const connection = createConnection((failedClient) => {
+    if (client === failedClient) {
+      client = null;
+      clientPromise = null;
+    }
+  });
+  client = connection.client;
+  clientPromise = connection.promise;
 }
 
 export { client };

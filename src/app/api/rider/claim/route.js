@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
-import { requireSession, requireRole } from "@/lib/auth-server";
+import {
+  requireSession,
+  requireRole,
+  serializeOrderForUser,
+} from "@/lib/auth-server";
 
 export async function POST(request) {
   try {
@@ -31,16 +35,20 @@ export async function POST(request) {
       );
     }
 
-    // Atomic claim condition: riderUserId must be null and order status must be confirmed/awaiting_rider
+    // Both current and legacy rider fields must be empty before a claim.
     const now = new Date().toISOString();
     const claimResult = await ordersCol.updateOne(
       {
         id: orderId,
-        riderUserId: null,
         status: { $in: [ORDER_STATUS.CONFIRMED, ORDER_STATUS.AWAITING_RIDER] },
+        $and: [
+          { $or: [{ riderId: null }, { riderId: { $exists: false } }] },
+          { $or: [{ riderUserId: null }, { riderUserId: { $exists: false } }] },
+        ],
       },
       {
         $set: {
+          riderId: user.id,
           riderUserId: user.id,
           riderName: user.name,
           riderPhone: user.phone || "+880 1911-223344",
@@ -65,10 +73,14 @@ export async function POST(request) {
     const updated = await ordersCol.findOne({ id: orderId });
     return NextResponse.json({
       success: true,
-      data: updated,
+      data: serializeOrderForUser(updated, user),
       message: "Order claimed successfully",
     });
   } catch (err) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error("[Rider Claim API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
   }
 }
