@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/student/orders/[orderId]/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/student/orders/[orderId]/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect, use, useCallback } from "react";
+import Link from "next/link";
+import { orderService } from "@/services/order-service";
+import { usePolling } from "@/hooks/use-polling";
+import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/constants";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { OrderStatusStepper } from "@/components/shared/order-status-stepper";
+import { HandoverCodeDisplay } from "@/components/shared/handover-code-display";
+import { OrderReviewModal } from "@/components/reviews/order-review-modal";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  ArrowLeft,
+  Store,
+  Bike,
+  MapPin,
+  Clock,
+  Phone,
+  ShieldAlert,
+  Star,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
+import { toast } from "sonner";
+
+/**
+ * Function OrderTrackingPage.
+ * @returns {*} The operation result.
+ */
+export default function OrderTrackingPage({ params }) {
+  const unwrappedParams = use(params);
+  const orderId = unwrappedParams.orderId;
+
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [codeReissueLoading, setCodeReissueLoading] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [paymentReferences, setPaymentReferences] = useState({});
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSubmitting, setPaymentSubmitting] = useState("");
+
+  const loadOrder = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const [res, paymentResponse] = await Promise.all([
+      orderService.getOrderById(orderId),
+      orderService.listPayments(orderId),
+    ]);
+    if (res.success) {
+      setOrder(res.data);
+      setLoadError("");
+    } else {
+      setLoadError(res.error?.message || "Unable to load order details.");
+    }
+    if (paymentResponse.success) {
+      setPayments(paymentResponse.data);
+      setPaymentError("");
+    } else {
+      setPaymentError(paymentResponse.error?.message || "Unable to load payment status.");
+    }
+    if (showLoading) setLoading(false);
+  }, [orderId]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
+
+  usePolling(() => loadOrder(false), 10000);
+
+  const closeRatingModal = useCallback(() => setIsRatingOpen(false), []);
+
+  if (loading) {
+    return (
+      &lt;div className="py-20 text-center text-xs text-zinc-400">
+        Loading order details...
+      &lt;/div>
+    );
+  }
+
+  if (!order) {
+    return (
+      &lt;div className="py-20 text-center space-y-4">
+        &lt;h2 className="text-xl font-bold">{loadError ? "Order Unavailable" : "Order Not Found"}&lt;/h2>
+        {loadError &amp;&amp; &lt;p role="alert" className="text-sm text-rose-600">{loadError}&lt;/p>}
+        {loadError &amp;&amp; (
+          &lt;Button variant="outline" onClick={() => loadOrder()}>
+            Try again
+          &lt;/Button>
+        )}
+        &lt;Link href="/student/orders">
+          &lt;Button variant="primary">Back to Orders&lt;/Button>
+        &lt;/Link>
+      &lt;/div>
+    );
+  }
+
+  const isDelivered = order.status === ORDER_STATUS.DELIVERED;
+  const isCancelled = order.status === ORDER_STATUS.CANCELLED;
+  const canCancel = [
+    ORDER_STATUS.PLACED,
+    ORDER_STATUS.CONFIRMED,
+    ORDER_STATUS.PREPARING,
+    ORDER_STATUS.AWAITING_RIDER,
+  ].includes(order.status);
+
+  /**
+   * Arrow function handleCancelOrder.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleCancelOrder = async () => {
+    setActionLoading(true);
+    const result = await orderService.cancelOrder(order.id);
+    setActionLoading(false);
+    if (result.success) {
+      setOrder(result.data);
+      toast.success("Order cancelled.");
+    } else {
+      toast.error(result.error.message);
+    }
+  };
+
+  /**
+   * Arrow function handleReissueDeliveryCode.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleReissueDeliveryCode = async () => {
+    setCodeReissueLoading(true);
+    const result = await orderService.reissueVerificationCode(order.id, "delivery");
+    setCodeReissueLoading(false);
+    if (!result.success) {
+      toast.error(result.error?.message || "Unable to issue a new delivery code.");
+      return;
+    }
+    setOrder(result.data);
+    toast.success("A new delivery code is ready.");
+  };
+
+  /**
+   * Arrow function handleRateOrder.
+   * @param {*} review - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleRateOrder = async (review) => {
+    setActionLoading(true);
+    const result = await orderService.rateOrder(order.id, review);
+    setActionLoading(false);
+    if (result.success) {
+      setOrder(result.data);
+      setIsRatingOpen(false);
+      toast.success("Thanks for rating your order.");
+    } else {
+      toast.error(result.error.message);
+    }
+  };
+
+  /**
+   * Arrow function handleSubmitPaymentReference.
+   * @param {*} payment - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleSubmitPaymentReference = async (payment) => {
+    const reference = String(paymentReferences[payment.obligation] || "").trim();
+    if (!reference) {
+      setPaymentError("Enter the bKash transaction reference for this payment.");
+      return;
+    }
+    setPaymentSubmitting(payment.obligation);
+    setPaymentError("");
+    const result = await orderService.submitPaymentReference(
+      order.id,
+      payment.obligation,
+      reference
+    );
+    setPaymentSubmitting("");
+    if (result.success) {
+      setPaymentReferences((current) => ({ ...current, [payment.obligation]: "" }));
+      toast.success("Reference submitted. It remains pending until an administrator verifies the merchant record.");
+      await loadOrder(false);
+    } else {
+      setPaymentError(result.error?.message || "Unable to submit payment reference.");
+    }
+  };
+
+  return (
+    &lt;div className="max-w-4xl mx-auto space-y-8 pb-16">
+      {loadError &amp;&amp; (
+        &lt;p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          Showing the latest loaded order details. Refresh failed: {loadError}
+        &lt;/p>
+      )}
+
+      {/* Top Navigation */}
+      &lt;div className="flex items-center justify-between">
+        &lt;Link
+          href="/student/orders"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-emerald-700"
+        >
+          &lt;ArrowLeft className="h-4 w-4" />
+          &lt;span>Back to All Orders&lt;/span>
+        &lt;/Link>
+
+        &lt;span
+          className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+            ORDER_STATUS_COLORS[order.status] || "bg-zinc-100 text-zinc-800"
+          }`}
+        >
+          {ORDER_STATUS_LABELS[order.status] || order.status}
+        &lt;/span>
+      &lt;/div>
+
+      {/* Header Info */}
+      &lt;div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
+        &lt;div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          &lt;div>
+            &lt;h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-50">
+              Order #{order.id}
+            &lt;/h1>
+            &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Placed on {formatDate(order.createdAt)} • {order.paymentMethod}
+            &lt;/p>
+          &lt;/div>
+
+          &lt;div className="text-right">
+            &lt;div className="text-xs text-zinc-400">Total Charged&lt;/div>
+            &lt;div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-400">
+              {formatCurrency(order.total)}
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+
+        {/* Live Stepper */}
+        &lt;OrderStatusStepper
+          status={order.status}
+          timestamps={order.statusTimestamps || {}}
+          rejectionReason={order.rejectionReason}
+        />
+      &lt;/div>
+
+      {payments.length > 0 &amp;&amp; (
+        &lt;Card>
+          &lt;CardContent className="p-6 space-y-5">
+            &lt;div>
+              &lt;h2 className="font-bold text-zinc-900 dark:text-zinc-100">Separate bKash payments&lt;/h2>
+              &lt;p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                The transaction reference is not proof of payment. Both obligations
+                must be manually verified before the shop can offer this order for pickup.
+                Never provide your PIN or OTP.
+              &lt;/p>
+            &lt;/div>
+            {paymentError &amp;&amp; &lt;p role="alert" className="text-xs text-rose-600">{paymentError}&lt;/p>}
+            {payments.map((payment) => (
+              &lt;div key={payment.id} className="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 space-y-3">
+                &lt;div className="flex flex-wrap items-center justify-between gap-2">
+                  &lt;div>
+                    &lt;h3 className="text-sm font-semibold capitalize">
+                      {payment.obligation === "shop" ? "Food amount — shop" : "Delivery + platform fees — CampusEats"}
+                    &lt;/h3>
+                    &lt;p className="text-xs text-zinc-500">
+                      BDT {(payment.amountPaisa / 100).toFixed(2)} · Send to {payment.recipient || "recipient not configured"}
+                    &lt;/p>
+                  &lt;/div>
+                  &lt;span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-xs font-medium">
+                    {payment.status.replaceAll("_", " ")}
+                  &lt;/span>
+                &lt;/div>
+                {payment.rejectionReason &amp;&amp; (
+                  &lt;p className="text-xs text-rose-600">Reason: {payment.rejectionReason}&lt;/p>
+                )}
+                {["not_submitted", "rejected", "expired"].includes(payment.status) &amp;&amp; (
+                  &lt;div className="flex flex-col sm:flex-row gap-2">
+                    &lt;label className="sr-only" htmlFor={`payment-reference-${payment.obligation}`}>
+                      {payment.obligation} bKash transaction reference
+                    &lt;/label>
+                    &lt;input
+                      id={`payment-reference-${payment.obligation}`}
+                      value={paymentReferences[payment.obligation] || ""}
+                      onChange={(event) =>
+                        setPaymentReferences((current) => ({
+                          ...current,
+                          [payment.obligation]: event.target.value,
+                        }))
+                      }
+                      maxLength={50}
+                      autoComplete="off"
+                      placeholder="Transaction reference"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+                    />
+                    &lt;Button
+                      variant="primary"
+                      disabled={paymentSubmitting === payment.obligation}
+                      onClick={() => handleSubmitPaymentReference(payment)}
+                    >
+                      {paymentSubmitting === payment.obligation ? "Submitting..." : "Submit reference"}
+                    &lt;/Button>
+                  &lt;/div>
+                )}
+              &lt;/div>
+            ))}
+          &lt;/CardContent>
+        &lt;/Card>
+      )}
+
+      &lt;div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        {/* Left Side: Handover Code / Rider Card */}
+        &lt;div className="md:col-span-7 space-y-6">
+          {!isDelivered &amp;&amp; !isCancelled &amp;&amp; order.status !== ORDER_STATUS.REJECTED &amp;&amp; (
+            &lt;div className="space-y-4">
+              {order.status === ORDER_STATUS.PICKED_UP ? (
+                &lt;>
+                  &lt;HandoverCodeDisplay
+                    code={order.deliveryVerificationCode}
+                    title="Delivery Handover Code"
+                    subtitle="When your rider arrives, show them this code. They enter it to verify delivery."
+                  />
+                  &lt;Button
+                    variant="outline"
+                    disabled={codeReissueLoading}
+                    isLoading={codeReissueLoading}
+                    onClick={handleReissueDeliveryCode}
+                    className="w-full"
+                  >
+                    Issue a new delivery code
+                  &lt;/Button>
+                  &lt;div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-center">
+                    &lt;p className="text-xs text-blue-800 dark:text-blue-300">
+                      Keep this code private until the rider is physically handing over your order. The rider must enter the matching code to complete delivery.
+                    &lt;/p>
+                  &lt;/div>
+                &lt;/>
+              ) : (
+                &lt;div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center">
+                  &lt;p className="text-xs text-zinc-600 dark:text-zinc-300">
+                    Your delivery handover code will appear here after the rider verifies pickup.
+                  &lt;/p>
+                &lt;/div>
+              )}
+            &lt;/div>
+          )}
+
+          {/* Delivered Status Review Card */}
+          {isDelivered &amp;&amp; (
+            &lt;Card>
+              &lt;CardContent className="p-6 text-center space-y-3">
+                &lt;div className="h-12 w-12 rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  &lt;CheckCircle2 className="h-6 w-6" />
+                &lt;/div>
+                &lt;h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  Order Successfully Delivered!
+                &lt;/h3>
+                &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-sm mx-auto">
+                  Your order is complete. bKash is simulated and cash collection is not verified here, so no real payment or payout was processed.
+                &lt;/p>
+
+                {order.ratingGiven ? (
+                  &lt;div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-left text-xs space-y-1">
+                    &lt;div className="flex items-center gap-1 text-amber-500 font-bold">
+                      &lt;Star className="h-4 w-4 fill-current" />
+                      &lt;span>
+                        Feedback submitted
+                        {order.ratingGiven.shopRating
+                          ? ` · Shop ${order.ratingGiven.shopRating}/5`
+                          : ""}
+                      &lt;/span>
+                    &lt;/div>
+                    &lt;div className="flex flex-wrap gap-2 pt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {(order.ratingGiven.foodReviews || []).map((review) => (
+                        &lt;span key={review.menuItemId} className="rounded-full bg-white px-2.5 py-1 dark:bg-zinc-900">
+                          Food {review.rating}/5
+                        &lt;/span>
+                      ))}
+                      {order.ratingGiven.riderReview &amp;&amp; (
+                        &lt;span className="rounded-full bg-white px-2.5 py-1 dark:bg-zinc-900">
+                          Rider {order.ratingGiven.riderReview.rating}/5
+                        &lt;/span>
+                      )}
+                    &lt;/div>
+                    {[
+                      order.ratingGiven.shopReview,
+                      ...(order.ratingGiven.foodReviews || []),
+                      order.ratingGiven.riderReview,
+                    ]
+                      .filter((review) => review?.comment)
+                      .map((review, index) => (
+                        &lt;p key={`${review.rating}-${index}`} className="text-zinc-600 dark:text-zinc-300 italic">
+                          “{review.comment}”
+                        &lt;/p>
+                      ))}
+                    {order.ratingGiven.reviewText &amp;&amp; !order.ratingGiven.shopReview &amp;&amp; (
+                      &lt;p className="text-zinc-600 dark:text-zinc-300 italic">
+                        “{order.ratingGiven.reviewText}”
+                      &lt;/p>
+                    )}
+                  &lt;/div>
+                ) : (
+                  &lt;div className="space-y-3">
+                    &lt;Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsRatingOpen(true)}
+                      className="rounded-xl"
+                    >
+                      &lt;Star className="h-4 w-4" />
+                      Rate your experience
+                    &lt;/Button>
+                  &lt;/div>
+                )}
+              &lt;/CardContent>
+            &lt;/Card>
+          )}
+
+          {/* Assigned Rider Info */}
+          {order.riderName ? (
+            &lt;Card>
+              &lt;CardContent className="p-5 flex items-center justify-between gap-4">
+                &lt;div className="flex items-center gap-3">
+                  &lt;div className="h-12 w-12 rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold">
+                    &lt;Bike className="h-6 w-6" />
+                  &lt;/div>
+                  &lt;div>
+                    &lt;h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                      Rider: {order.riderName}
+                    &lt;/h4>
+                    &lt;p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Student Rider • Campus Bicycle
+                    &lt;/p>
+                  &lt;/div>
+                &lt;/div>
+
+                {order.riderPhone &amp;&amp; (
+                  &lt;a
+                    href={`tel:${order.riderPhone}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                  >
+                    &lt;Phone className="h-3.5 w-3.5 text-emerald-600" />
+                    &lt;span>Call Rider&lt;/span>
+                  &lt;/a>
+                )}
+              &lt;/CardContent>
+            &lt;/Card>
+          ) : (
+            &lt;div className="p-4 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/40 text-center text-xs text-zinc-500">
+              &lt;Bike className="h-5 w-5 mx-auto mb-1 text-zinc-400 animate-pulse" />
+              &lt;span>Awaiting rider claim from nearby campus halls...&lt;/span>
+            &lt;/div>
+          )}
+        &lt;/div>
+
+        {/* Right Side: Order Items &amp; Delivery Summary */}
+        &lt;div className="md:col-span-5 space-y-4">
+          &lt;Card>
+            &lt;CardContent className="p-6 space-y-4">
+              &lt;div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                &lt;Store className="h-4 w-4 text-emerald-600" />
+                &lt;h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  {order.shopName}
+                &lt;/h4>
+              &lt;/div>
+
+              {/* Items List */}
+              &lt;div className="space-y-2 text-xs divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                {order.items.map((i, idx) => (
+                  &lt;div key={idx} className="pt-2 flex justify-between items-center">
+                    &lt;div>
+                      &lt;p className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {i.quantity}x {i.name}
+                      &lt;/p>
+                      &lt;p className="text-zinc-400">{formatCurrency(i.priceAtOrder)} each&lt;/p>
+                    &lt;/div>
+                    &lt;span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      {formatCurrency(i.priceAtOrder * i.quantity)}
+                    &lt;/span>
+                  &lt;/div>
+                ))}
+              &lt;/div>
+
+              {/* Cost breakdown */}
+              &lt;div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5 text-xs text-zinc-600 dark:text-zinc-300">
+                &lt;div className="flex justify-between">
+                  &lt;span>Subtotal&lt;/span>
+                  &lt;span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(order.subtotal)}
+                  &lt;/span>
+                &lt;/div>
+                &lt;div className="flex justify-between">
+                  &lt;span>Delivery Fee&lt;/span>
+                  &lt;span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(order.deliveryFee)}
+                  &lt;/span>
+                &lt;/div>
+                &lt;div className="flex justify-between">
+                  &lt;span>Platform Fee&lt;/span>
+                  &lt;span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(order.platformFee)}
+                  &lt;/span>
+                &lt;/div>
+                &lt;div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex justify-between text-sm font-extrabold text-zinc-900 dark:text-zinc-50">
+                  &lt;span>Total&lt;/span>
+                  &lt;span className="text-emerald-700 dark:text-emerald-400">
+                    {formatCurrency(order.total)}
+                  &lt;/span>
+                &lt;/div>
+              &lt;/div>
+
+              {/* Dormitory Address */}
+              &lt;div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-1 text-xs">
+                &lt;span className="text-zinc-400 font-medium">Delivery Location:&lt;/span>
+                &lt;p className="font-semibold text-zinc-800 dark:text-zinc-200">
+                  {order.deliveryAddressSnapshot}
+                &lt;/p>
+                {order.deliveryNote &amp;&amp; (
+                  &lt;p className="text-[11px] text-zinc-500 italic">
+                    Note: "{order.deliveryNote}"
+                  &lt;/p>
+                )}
+              &lt;/div>
+
+              {!isDelivered &amp;&amp; !isCancelled &amp;&amp; (
+                &lt;div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  {canCancel ? (
+                    &lt;Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      isLoading={actionLoading}
+                      onClick={handleCancelOrder}
+                      className="w-full rounded-xl text-rose-700"
+                    >
+                      Cancel Order
+                    &lt;/Button>
+                  ) : (
+                    &lt;p className="text-xs text-zinc-500">
+                      This order can no longer be cancelled after rider pickup.
+                    &lt;/p>
+                  )}
+                &lt;/div>
+              )}
+            &lt;/CardContent>
+          &lt;/Card>
+        &lt;/div>
+      &lt;/div>
+
+      &lt;OrderReviewModal
+        isOpen={isRatingOpen}
+        onClose={closeRatingModal}
+        order={order}
+        isSubmitting={actionLoading}
+        onSubmit={handleRateOrder}
+      />
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

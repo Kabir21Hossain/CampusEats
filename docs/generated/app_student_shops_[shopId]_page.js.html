@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/student/shops/[shopId]/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/student/shops/[shopId]/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { Suspense, use, useEffect, useState } from "react";
+import Link from "next/link";
+import { shopService } from "@/services/shop-service";
+import { menuService } from "@/services/menu-service";
+import { useCart } from "@/context/cart-context";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatCurrency } from "@/lib/utils";
+import {
+  Star,
+  Clock,
+  MapPin,
+  UtensilsCrossed,
+  Plus,
+  ShoppingBag,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+
+/**
+ * Function ShopDetailContent.
+ * @returns {*} The operation result.
+ */
+function ShopDetailContent({ params }) {
+  const unwrappedParams = use(params);
+  const shopId = unwrappedParams.shopId;
+
+  const [shop, setShop] = useState(null);
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const { addItem, items, itemCount, subtotal } = useCart();
+
+  useEffect(() => {
+    Promise.all([
+      shopService.getShopById(shopId),
+      menuService.listMenuItems(shopId),
+    ]).then(([shopRes, menuRes]) => {
+      if (shopRes.success) setShop(shopRes.data);
+      if (menuRes.success) setMenuItems(menuRes.data);
+      setLoading(false);
+    });
+  }, [shopId]);
+
+  if (loading) {
+    return (
+      &lt;div className="py-20 text-center text-sm text-zinc-500">
+        Loading canteen menu...
+      &lt;/div>
+    );
+  }
+
+  if (!shop) {
+    return (
+      &lt;EmptyState
+        icon={AlertCircle}
+        title="Shop not found"
+        description="The campus food outlet you are looking for does not exist or has been delisted."
+        actionText="Back to Canteens"
+        onAction={() => window.history.back()}
+      />
+    );
+  }
+
+  // Categories in this shop
+  const categories = ["All", ...new Set(menuItems.map((i) => i.category))];
+  const filteredItems =
+    selectedCategory === "All"
+      ? menuItems
+      : menuItems.filter((i) => i.category === selectedCategory);
+
+  return (
+    &lt;div className="space-y-8 pb-20 relative">
+      {/* Back button */}
+      &lt;div>
+        &lt;Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-emerald-700"
+        >
+          &lt;ArrowLeft className="h-4 w-4" />
+          &lt;span>Back to Campus Canteens&lt;/span>
+        &lt;/Link>
+      &lt;/div>
+
+      {/* Shop Header Banner */}
+      &lt;div className="relative rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md">
+        &lt;div className="relative h-56 sm:h-72 w-full">
+          &lt;img
+            src={shop.bannerUrl}
+            alt={shop.name}
+            className="h-full w-full object-cover"
+          />
+          &lt;div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+
+          {/* Floating Open/Closed Status */}
+          &lt;div className="absolute top-4 right-4">
+            &lt;Badge
+              variant={shop.isOpen ? "default" : "rose"}
+              size="md"
+              className={
+                shop.isOpen
+                  ? "bg-emerald-600 text-white font-bold"
+                  : "bg-rose-600 text-white font-bold"
+              }
+            >
+              {shop.isOpen ? "● Open for Orders" : "Closed"}
+            &lt;/Badge>
+          &lt;/div>
+
+          {/* Shop Info Overlay */}
+          &lt;div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 text-white">
+            &lt;div className="space-y-1.5 max-w-xl">
+              &lt;div className="flex items-center gap-2">
+                &lt;Badge variant="neutral" size="sm" className="bg-white/20 text-white border-white/30 backdrop-blur-md">
+                  {shop.cuisine}
+                &lt;/Badge>
+                &lt;div className="flex items-center gap-1 text-xs font-bold text-amber-400">
+                  &lt;Star className="h-3.5 w-3.5 fill-current" />
+                  &lt;span>{shop.rating}&lt;/span>
+                  &lt;span className="text-white/70 font-normal">({shop.reviewCount} reviews)&lt;/span>
+                &lt;/div>
+              &lt;/div>
+
+              &lt;h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                {shop.name}
+              &lt;/h1>
+              &lt;p className="text-xs sm:text-sm text-zinc-200 line-clamp-2">
+                {shop.description}
+              &lt;/p>
+
+              &lt;div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300 pt-1">
+                &lt;span className="flex items-center gap-1">
+                  &lt;MapPin className="h-3.5 w-3.5 text-emerald-400" />
+                  &lt;span>{shop.campusLocation}&lt;/span>
+                &lt;/span>
+                &lt;span className="flex items-center gap-1">
+                  &lt;Clock className="h-3.5 w-3.5 text-emerald-400" />
+                  &lt;span>{shop.operatingHours}&lt;/span>
+                &lt;/span>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div className="text-right shrink-0">
+              &lt;div className="text-[11px] text-zinc-300">Min. Order&lt;/div>
+              &lt;div className="text-lg font-bold text-emerald-300">
+                {formatCurrency(shop.minimumOrder)}
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      &lt;/div>
+
+      {/* Menu Categories */}
+      &lt;div className="space-y-4">
+        &lt;div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {categories.map((cat) => (
+            &lt;button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                selectedCategory === cat
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500"
+              }`}
+            >
+              {cat}
+            &lt;/button>
+          ))}
+        &lt;/div>
+
+        {/* Menu Items Grid */}
+        {filteredItems.length === 0 ? (
+          &lt;EmptyState
+            icon={UtensilsCrossed}
+            title="No items in this category"
+            description="Try selecting another category to see delicious options."
+            actionText="View All Items"
+            onAction={() => setSelectedCategory("All")}
+          />
+        ) : (
+          &lt;div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map((item) => (
+              &lt;Card key={item.id} hoverEffect className="flex flex-col justify-between">
+                &lt;div className="relative h-44 w-full overflow-hidden">
+                  &lt;img
+                    src={item.photoUrl}
+                    alt={item.name}
+                    className="h-full w-full object-cover"
+                  />
+                  &lt;div className="absolute top-2.5 left-2.5 flex gap-1 flex-wrap">
+                    {item.dietary?.map((tag) => (
+                      &lt;Badge
+                        key={tag}
+                        variant="default"
+                        size="sm"
+                        className="bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 backdrop-blur-md text-[10px]"
+                      >
+                        {tag}
+                      &lt;/Badge>
+                    ))}
+                  &lt;/div>
+                  &lt;div className="absolute bottom-2.5 right-2.5 bg-black/65 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1">
+                    &lt;Clock className="h-3 w-3 text-emerald-400" />
+                    &lt;span>{item.preparationTimeMinutes} mins&lt;/span>
+                  &lt;/div>
+                &lt;/div>
+
+                &lt;CardContent className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                  &lt;div>
+                    &lt;h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                      {item.name}
+                    &lt;/h4>
+                    &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                      {item.description}
+                    &lt;/p>
+                  &lt;/div>
+
+                  &lt;div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                    &lt;span className="text-base font-extrabold text-zinc-900 dark:text-zinc-50">
+                      {formatCurrency(item.priceBDT)}
+                    &lt;/span>
+                    &lt;Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => addItem(item, shop)}
+                      className="rounded-xl px-3 py-1.5 text-xs font-semibold"
+                    >
+                      &lt;Plus className="h-3.5 w-3.5" />
+                      Add to Cart
+                    &lt;/Button>
+                  &lt;/div>
+                &lt;/CardContent>
+              &lt;/Card>
+            ))}
+          &lt;/div>
+        )}
+      &lt;/div>
+
+      {/* Floating Bottom Cart Bar (if items in cart) */}
+      {itemCount > 0 &amp;&amp; (
+        &lt;div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-40 animate-in slide-in-from-bottom-5">
+          &lt;Link
+            href="/student/cart"
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-800 text-white shadow-2xl hover:bg-emerald-900 transition-all border border-emerald-700"
+          >
+            &lt;div className="flex items-center gap-3">
+              &lt;div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center font-bold">
+                &lt;ShoppingBag className="h-4 w-4" />
+              &lt;/div>
+              &lt;div>
+                &lt;p className="text-xs font-bold leading-none">
+                  {itemCount} {itemCount === 1 ? "Item" : "Items"} in Cart
+                &lt;/p>
+                &lt;p className="text-[11px] text-emerald-200 mt-0.5">
+                  Subtotal: {formatCurrency(subtotal)}
+                &lt;/p>
+              &lt;/div>
+            &lt;/div>
+            &lt;span className="text-xs font-bold bg-white text-emerald-900 px-3.5 py-1.5 rounded-xl shadow-xs">
+              View Cart →
+            &lt;/span>
+          &lt;/Link>
+        &lt;/div>
+      )}
+    &lt;/div>
+  );
+}
+
+/**
+ * Function ShopDetailPage.
+ * @returns {*} The operation result.
+ */
+export default function ShopDetailPage({ params }) {
+  return (
+    &lt;Suspense fallback={&lt;div className="py-20 text-center text-sm text-zinc-500">Loading canteen menu...&lt;/div>}>
+      &lt;ShopDetailContent params={params} />
+    &lt;/Suspense>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

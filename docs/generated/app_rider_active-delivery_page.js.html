@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/rider/active-delivery/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/rider/active-delivery/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { riderService } from "@/services/rider-service";
+import { useAuth } from "@/context/auth-context";
+import { ORDER_STATUS } from "@/lib/constants";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { HandoverCodeForm } from "@/components/shared/handover-code-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatCurrency } from "@/lib/utils";
+import {
+  Bike,
+  Store,
+  MapPin,
+  Phone,
+  CheckCircle2,
+  Package,
+  QrCode,
+  ArrowRight,
+  ShieldCheck,
+  Check,
+} from "lucide-react";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
+
+/**
+ * Function RiderActiveDeliveryPage.
+ * @returns {*} The operation result.
+ */
+export default function RiderActiveDeliveryPage() {
+  const router = useRouter();
+  const { currentUser } = useAuth();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [activeStep, setActiveStep] = useState(1); // 1 = pickup, 3 = delivery route, 4 = delivery verification, 5 = completed
+
+  /**
+   * Arrow function loadActiveOrder.
+   * @returns {*} The operation result.
+   */
+  const loadActiveOrder = () => {
+    setLoading(true);
+    riderService.getActiveDelivery().then((res) => {
+      if (res.success &amp;&amp; res.data) {
+        setOrder(res.data);
+        setLoadError("");
+        if (res.data.status === ORDER_STATUS.PICKED_UP) {
+          setActiveStep(3); // Already picked up, en route to dorm
+        } else {
+          setActiveStep(1); // Claimed, heading to pickup
+        }
+      } else {
+        setOrder(null);
+        setLoadError(res.error?.message || "");
+      }
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    loadActiveOrder();
+  }, [currentUser]);
+
+  /**
+   * Arrow function handleVerifyPickup.
+   * @param {*} code - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleVerifyPickup = async (code) => {
+    const res = await riderService.verifyPickup(order.id, code);
+    if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
+      toast.success("Pickup verified! Food collected from canteen.");
+      setOrder(res.data);
+      setActiveStep(3); // Advance to en route to student
+    } else {
+      toast.error(res.error?.message || "Invalid pickup code");
+    }
+  };
+
+  /**
+   * Arrow function handleVerifyDelivery.
+   * @param {*} code - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleVerifyDelivery = async (code) => {
+    const res = await riderService.verifyDelivery(order.id, code);
+    if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
+      try {
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+      } catch {}
+      toast.success("Delivery completed. Sandbox settlement was recorded.");
+      setOrder(res.data);
+      setActiveStep(5); // Completed!
+    } else {
+      toast.error(res.error?.message || "Invalid customer delivery code");
+    }
+  };
+
+  if (loading) {
+    return &lt;div className="p-12 text-center text-xs text-zinc-400">Loading delivery journey...&lt;/div>;
+  }
+
+  if (!order &amp;&amp; activeStep !== 5) {
+    return (
+      &lt;div className="py-16 max-w-md mx-auto">
+        &lt;EmptyState
+          icon={Bike}
+          title={loadError ? "Unable to load delivery" : "No active delivery in progress"}
+          description={loadError || "You don't have an ongoing delivery right now. Check the available feed to claim a new order."}
+          actionText={loadError ? "Try again" : "View Available Orders"}
+          onAction={loadError ? loadActiveOrder : () => router.push("/rider/available-orders")}
+        />
+      &lt;/div>
+    );
+  }
+
+  const riderEarnings = Math.max(35, Math.round((order?.total || 300) * 0.12));
+
+  return (
+    &lt;div className="max-w-2xl mx-auto space-y-6 pb-16">
+      {/* Step Tracker Header */}
+      &lt;div className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+        &lt;div>
+          &lt;span className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+            Active Delivery Workflow
+          &lt;/span>
+          &lt;h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+            Order #{order?.id}
+          &lt;/h2>
+        &lt;/div>
+
+        &lt;div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200/50 dark:border-emerald-800/40">
+          &lt;span>Fee: {formatCurrency(riderEarnings)}&lt;/span>
+        &lt;/div>
+      &lt;/div>
+
+      {/* Workflow Step Content */}
+
+      {/* STEP 1: Head to Canteen */}
+      {activeStep === 1 &amp;&amp; (
+        &lt;Card className="border-emerald-600/40">
+          &lt;CardContent className="p-6 space-y-5">
+            &lt;div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 p-2.5 rounded-xl">
+              &lt;Store className="h-4 w-4" />
+              &lt;span>Step 1: Head to Canteen for Pickup&lt;/span>
+            &lt;/div>
+
+            &lt;div className="space-y-2">
+              &lt;h3 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+                {order.shopName}
+              &lt;/h3>
+              &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                &lt;MapPin className="h-4 w-4 text-emerald-600" />
+                &lt;span>{order.shopLocation}&lt;/span>
+              &lt;/p>
+            &lt;/div>
+
+            &lt;div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 space-y-1 text-xs">
+              &lt;span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                Items to Collect:
+              &lt;/span>
+              &lt;ul className="list-disc list-inside text-zinc-600 dark:text-zinc-400 pt-1 space-y-0.5">
+                {order.items.map((i, idx) => (
+                  &lt;li key={idx}>
+                    {i.quantity}x {i.name}
+                  &lt;/li>
+                ))}
+              &lt;/ul>
+            &lt;/div>
+
+            &lt;div className="space-y-3 border-t border-zinc-100 dark:border-zinc-800 pt-5">
+              &lt;div className="space-y-1">
+                &lt;h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Shop handover code
+                &lt;/h3>
+                &lt;p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Ask the shop staff for the pickup code when you collect the order.
+                &lt;/p>
+              &lt;/div>
+              &lt;HandoverCodeForm
+                onVerify={handleVerifyPickup}
+                actionLabel="Verify Pickup"
+                codeLength={6}
+              />
+            &lt;/div>
+          &lt;/CardContent>
+        &lt;/Card>
+      )}
+
+      {/* STEP 3: En route to Student Dormitory */}
+      {activeStep === 3 &amp;&amp; (
+        &lt;Card className="border-blue-600/40">
+          &lt;CardContent className="p-6 space-y-5">
+            &lt;div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 p-2.5 rounded-xl">
+              &lt;Bike className="h-4 w-4" />
+              &lt;span>Step 2: En Route to Dormitory Destination&lt;/span>
+            &lt;/div>
+
+            &lt;div className="space-y-2">
+              &lt;h3 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+                {order.deliveryAddressSnapshot}
+              &lt;/h3>
+              &lt;p className="text-xs text-zinc-500">
+                Customer: &lt;strong>{order.customerName}&lt;/strong>
+              &lt;/p>
+              {order.deliveryNote &amp;&amp; (
+                &lt;div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-xs">
+                  Instructions: "{order.deliveryNote}"
+                &lt;/div>
+              )}
+            &lt;/div>
+
+            &lt;div className="flex items-center gap-3">
+              &lt;a
+                href={`tel:${order.customerPhone}`}
+                className="flex-1 inline-flex items-center justify-center gap-2 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50"
+              >
+                &lt;Phone className="h-4 w-4 text-emerald-600" />
+                &lt;span>Call Student ({order.customerPhone})&lt;/span>
+              &lt;/a>
+            &lt;/div>
+
+            &lt;Button
+              variant="primary"
+              size="lg"
+              onClick={() => setActiveStep(4)}
+              className="w-full rounded-xl font-bold py-3 text-sm bg-blue-600 hover:bg-blue-700"
+            >
+              &lt;QrCode className="h-4 w-4 mr-2" />
+              &lt;span>Arrived at Dorm Gate — Verify Handover&lt;/span>
+            &lt;/Button>
+          &lt;/CardContent>
+        &lt;/Card>
+      )}
+
+      {/* STEP 4: Verify Handover Code with Student */}
+      {activeStep === 4 &amp;&amp; (
+        &lt;div className="space-y-4">
+          &lt;div className="text-center space-y-1">
+            &lt;h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              Verify Handover with Student
+            &lt;/h3>
+            &lt;p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Ask the student to show their delivery code, then enter the matching code below.
+            &lt;/p>
+          &lt;/div>
+
+          &lt;HandoverCodeForm
+            onVerify={handleVerifyDelivery}
+            actionLabel="Complete Handover"
+            codeLength={6}
+          />
+
+          &lt;div className="text-center">
+            &lt;button
+              type="button"
+              onClick={() => setActiveStep(3)}
+              className="text-xs text-zinc-400 hover:underline"
+            >
+              ← Back to Dorm Directions
+            &lt;/button>
+          &lt;/div>
+        &lt;/div>
+      )}
+
+      {/* STEP 5: Delivery Completed Celebration */}
+      {activeStep === 5 &amp;&amp; (
+        &lt;Card className="border-emerald-600">
+          &lt;CardContent className="p-8 text-center space-y-4">
+            &lt;div className="h-16 w-16 rounded-3xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+              &lt;CheckCircle2 className="h-9 w-9" />
+            &lt;/div>
+
+            &lt;h2 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50">
+              Delivery Completed
+            &lt;/h2>
+            &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
+              Order #{order?.id} verified. Estimated delivery fee:{" "}
+              &lt;strong className="text-emerald-700 dark:text-emerald-400 font-bold">
+                {formatCurrency(riderEarnings)}
+              &lt;/strong>
+              . This sandbox app does not transfer funds or maintain a wallet balance.
+            &lt;/p>
+
+            &lt;div className="pt-4 flex flex-col sm:flex-row gap-2 justify-center">
+              &lt;Link href="/rider/available-orders">
+                &lt;Button variant="primary" size="md" className="rounded-xl font-bold w-full sm:w-auto">
+                  Find Next Delivery Offer
+                &lt;/Button>
+              &lt;/Link>
+              &lt;Link href="/rider/earnings">
+                &lt;Button variant="outline" size="md" className="rounded-xl w-full sm:w-auto">
+                  Earnings information
+                &lt;/Button>
+              &lt;/Link>
+            &lt;/div>
+          &lt;/CardContent>
+        &lt;/Card>
+      )}
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

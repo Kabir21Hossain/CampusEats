@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/shop-owner/settings/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/shop-owner/settings/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect } from "react";
+import { shopService } from "@/services/shop-service";
+import { useAuth } from "@/context/auth-context";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Store, MapPin, Save, Image as ImageIcon, Smartphone } from "lucide-react";
+import { toast } from "sonner";
+import { PersonalBkashSettings } from "@/components/profile/personal-bkash-settings";
+
+/**
+ * Function ShopOwnerSettingsPage.
+ * @returns {*} The operation result.
+ */
+export default function ShopOwnerSettingsPage() {
+  const { currentUser } = useAuth();
+  const [shop, setShop] = useState(null);
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentSettingsError, setPaymentSettingsError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    /**
+     * Function loadSettings.
+     * @returns {Promise&lt;*>} Resolves with the operation result.
+     */
+    async function loadSettings() {
+      const response = await shopService.getShopByOwner(currentUser?.id);
+      if (!active) return;
+      if (!response.success) {
+        setLoading(false);
+        return;
+      }
+      setShop(response.data);
+      const paymentResponse = await shopService.getPaymentSettings(response.data.id);
+      if (!active) return;
+      if (paymentResponse.success) {
+        setBkashNumber(paymentResponse.data.bkashNumber || "");
+      } else {
+        setPaymentSettingsError(paymentResponse.error.message);
+      }
+      setLoading(false);
+    }
+    if (currentUser?.id) loadSettings();
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id]);
+
+  /**
+   * Arrow function handleSave.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const res = await shopService.updateShop(shop.id, {
+      name: shop.name,
+      campusLocation: shop.campusLocation,
+      description: shop.description,
+      bannerUrl: shop.bannerUrl,
+    });
+    setSaving(false);
+    if (res.success) {
+      toast.success("Shop information updated successfully!");
+    } else {
+      toast.error(res.error.message);
+    }
+  };
+
+  /**
+   * Arrow function handlePaymentSave.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handlePaymentSave = async (e) => {
+    e.preventDefault();
+    setPaymentSaving(true);
+    setPaymentSettingsError("");
+    const response = await shopService.updatePaymentSettings(shop.id, bkashNumber);
+    setPaymentSaving(false);
+    if (response.success) {
+      setBkashNumber(response.data.bkashNumber);
+      toast.success("Shop bKash payment number saved.");
+    } else {
+      setPaymentSettingsError(response.error.message);
+      toast.error(response.error.message);
+    }
+  };
+
+  if (loading) {
+    return &lt;div className="p-12 text-center text-xs text-zinc-400">Loading settings...&lt;/div>;
+  }
+  if (!shop) {
+    return &lt;div className="p-12 text-center text-xs text-zinc-500">No shop is assigned to this account yet.&lt;/div>;
+  }
+
+  return (
+    &lt;div className="max-w-2xl mx-auto space-y-6 pb-16">
+      &lt;div>
+        &lt;h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          Canteen Settings &amp;amp; Profile
+        &lt;/h1>
+        &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+          Manage your shop name, location, description, and storefront banner
+        &lt;/p>
+      &lt;/div>
+
+      &lt;Card>
+        &lt;CardContent className="p-6 space-y-6">
+          {/* Banner preview */}
+          &lt;div className="space-y-2">
+            &lt;span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              Storefront Banner
+            &lt;/span>
+            &lt;div className="relative h-44 w-full rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+              &lt;img
+                src={shop?.bannerUrl}
+                alt="Banner preview"
+                className="h-full w-full object-cover"
+              />
+            &lt;/div>
+          &lt;/div>
+
+          &lt;form onSubmit={handleSave} className="space-y-4">
+            &lt;Input
+              label="Shop Name"
+              icon={Store}
+              value={shop?.name || ""}
+              onChange={(e) => setShop({ ...shop, name: e.target.value })}
+              required
+            />
+
+            &lt;div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              &lt;Input
+                label="Physical Location"
+                icon={MapPin}
+                value={shop?.campusLocation || ""}
+                onChange={(e) => setShop({ ...shop, campusLocation: e.target.value })}
+                required
+              />
+
+            &lt;/div>
+
+            &lt;Input
+              label="Banner Image URL"
+              icon={ImageIcon}
+              value={shop?.bannerUrl || ""}
+              onChange={(e) => setShop({ ...shop, bannerUrl: e.target.value })}
+            />
+
+            &lt;div className="space-y-1.5 text-left">
+              &lt;label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Canteen Description
+              &lt;/label>
+              &lt;textarea
+                rows={3}
+                value={shop?.description || ""}
+                onChange={(e) => setShop({ ...shop, description: e.target.value })}
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 text-xs text-zinc-900 dark:text-zinc-100"
+              />
+            &lt;/div>
+
+            &lt;div className="pt-2 flex justify-end">
+              &lt;Button type="submit" variant="primary" size="md" isLoading={saving} className="rounded-xl font-bold">
+                &lt;Save className="h-4 w-4 mr-1.5" />
+                Save Settings
+              &lt;/Button>
+            &lt;/div>
+          &lt;/form>
+        &lt;/CardContent>
+      &lt;/Card>
+
+      &lt;Card>
+        &lt;CardContent className="p-6 space-y-4">
+          &lt;div>
+            &lt;h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+              Shop bKash payments
+            &lt;/h2>
+            &lt;p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Students use this number to pay the food portion of their order. Checkout stays unavailable until it is set.
+            &lt;/p>
+          &lt;/div>
+          &lt;form onSubmit={handlePaymentSave} className="space-y-4">
+            &lt;Input
+              label="Shop bKash number"
+              icon={Smartphone}
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="01XXXXXXXXX"
+              value={bkashNumber}
+              onChange={(e) => setBkashNumber(e.target.value)}
+              required
+              helperText="Enter the Bangladesh bKash account number that receives shop payments."
+            />
+            {paymentSettingsError &amp;&amp; (
+              &lt;p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+                {paymentSettingsError}
+              &lt;/p>
+            )}
+            &lt;div className="flex justify-end">
+              &lt;Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={paymentSaving}
+                className="rounded-xl font-bold"
+              >
+                &lt;Save className="h-4 w-4 mr-1.5" />
+                Save payment number
+              &lt;/Button>
+            &lt;/div>
+          &lt;/form>
+        &lt;/CardContent>
+      &lt;/Card>
+      &lt;PersonalBkashSettings />
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

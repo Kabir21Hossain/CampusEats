@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/rider/available-orders/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/rider/available-orders/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { riderService } from "@/services/rider-service";
+import { useAuth } from "@/context/auth-context";
+import { usePolling } from "@/hooks/use-polling";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatCurrency } from "@/lib/utils";
+import {
+  Bike,
+  Store,
+  MapPin,
+  Clock,
+  ArrowRight,
+  Power,
+  DollarSign,
+  Package,
+  CheckCircle2,
+} from "lucide-react";
+import { toast } from "sonner";
+
+/**
+ * Function RiderAvailableOrdersPage.
+ * @returns {*} The operation result.
+ */
+export default function RiderAvailableOrdersPage() {
+  const router = useRouter();
+  const { currentUser } = useAuth();
+  const [isOnline, setIsOnline] = useState(false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
+  const [activeDelivery, setActiveDelivery] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [claimingId, setClaimingId] = useState(null);
+  const [feedError, setFeedError] = useState("");
+
+  const loadFeed = useCallback(async ({ showLoading = true } = {}) => {
+    if (showLoading) setLoading(true);
+    try {
+      const [availRes, activeRes] = await Promise.all([
+        riderService.getAvailableOrders(),
+        riderService.getActiveDelivery(),
+      ]);
+      if (!availRes.success) {
+        setFeedError(availRes.error?.message || "Unable to load delivery offers.");
+        return;
+      }
+      if (!activeRes.success) {
+        setFeedError(activeRes.error?.message || "Unable to load your active delivery.");
+        return;
+      }
+      setOrders(availRes.data);
+      setActiveDelivery(activeRes.data);
+      setFeedError("");
+    } catch (error) {
+      setFeedError(error.message || "Unable to load delivery offers.");
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) loadFeed();
+  }, [currentUser?.id, loadFeed]);
+
+  usePolling(() => {
+    if (isOnline) loadFeed({ showLoading: false });
+  }, 10000);
+
+  useEffect(() => {
+    let isActive = true;
+    if (currentUser) {
+      setAvailabilityLoading(true);
+      riderService.getAvailability().then((result) => {
+        if (!isActive) return;
+        if (result.success) {
+          setIsOnline(result.data.isOnline);
+        } else {
+          setFeedError(result.error?.message || "Unable to load rider availability.");
+        }
+        setAvailabilityLoading(false);
+      });
+    }
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id]);
+
+  /**
+   * Arrow function handleAvailabilityChange.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleAvailabilityChange = async () => {
+    if (availabilityLoading) return;
+    setAvailabilityLoading(true);
+    const result = await riderService.setAvailability(!isOnline);
+    setAvailabilityLoading(false);
+    if (!result.success) {
+      toast.error(result.error?.message || "Unable to update availability.");
+      return;
+    }
+    setIsOnline(result.data.isOnline);
+    if (result.data.isOnline) loadFeed();
+    toast.info(result.data.isOnline ? "You are now online for delivery requests." : "You are now offline.");
+  };
+
+  /**
+   * Arrow function handleClaim.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleClaim = async (orderId) => {
+    setClaimingId(orderId);
+    const res = await riderService.claimOrder(
+      orderId
+    );
+    setClaimingId(null);
+    if (res.success) {
+      if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
+      toast.success("Order claimed! Heading to active delivery workflow.");
+      router.push("/rider/active-delivery");
+    } else {
+      toast.error(res.error?.message || "Failed to claim order");
+      loadFeed();
+    }
+  };
+
+  return (
+    &lt;div className="space-y-6 pb-16 max-w-4xl mx-auto">
+      {/* Rider Status &amp; Online Toggle Bar */}
+      &lt;div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+        &lt;div className="flex items-center gap-3">
+          &lt;div
+            className={`h-11 w-11 rounded-2xl flex items-center justify-center font-bold ${
+              isOnline
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+            }`}
+          >
+            &lt;Bike className="h-6 w-6" />
+          &lt;/div>
+          &lt;div>
+            &lt;div className="flex items-center gap-2">
+              &lt;h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                {currentUser?.name || "Sabbir Hossain"}
+              &lt;/h2>
+              &lt;Badge
+                variant={isOnline ? "default" : "neutral"}
+                size="sm"
+                className={isOnline ? "bg-emerald-600 text-white font-bold" : ""}
+              >
+                {isOnline ? "● Ready for Deliveries" : "Offline"}
+              &lt;/Badge>
+            &lt;/div>
+            &lt;p className="text-xs text-zinc-500">
+              Vehicle: Bicycle • Hall-to-Hall Delivery Network
+            &lt;/p>
+          &lt;/div>
+        &lt;/div>
+
+        &lt;div className="flex items-center gap-2">
+          &lt;Button
+            variant={isOnline ? "outline" : "primary"}
+            size="md"
+            onClick={handleAvailabilityChange}
+            disabled={availabilityLoading}
+            className="rounded-xl text-xs font-semibold"
+          >
+            &lt;Power className="h-3.5 w-3.5" />
+            &lt;span>{isOnline ? "Go Offline" : "Go Online"}&lt;/span>
+          &lt;/Button>
+        &lt;/div>
+      &lt;/div>
+
+      {/* Active Delivery Banner if in progress */}
+      {activeDelivery &amp;&amp; (
+        &lt;div className="p-5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md flex items-center justify-between gap-4">
+          &lt;div className="flex items-center gap-3">
+            &lt;div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center font-bold">
+              &lt;Package className="h-5 w-5" />
+            &lt;/div>
+            &lt;div>
+              &lt;p className="text-xs text-blue-200 uppercase font-semibold tracking-wider">
+                Active Delivery in Progress
+              &lt;/p>
+              &lt;h4 className="text-base font-extrabold">
+                Order #{activeDelivery.id} from {activeDelivery.shopName}
+              &lt;/h4>
+            &lt;/div>
+          &lt;/div>
+
+          &lt;Link href="/rider/active-delivery">
+            &lt;Button
+              variant="primary"
+              size="md"
+              className="bg-white text-blue-900 hover:bg-blue-50 font-bold rounded-xl text-xs"
+            >
+              &lt;span>Continue Delivery&lt;/span>
+              &lt;ArrowRight className="h-4 w-4" />
+            &lt;/Button>
+          &lt;/Link>
+        &lt;/div>
+      )}
+
+      {/* Available Delivery Feed */}
+      &lt;div className="space-y-4">
+        &lt;div className="flex items-center justify-between">
+          &lt;h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+            Available Delivery Offers
+          &lt;/h3>
+          &lt;span className="text-xs text-zinc-400">
+            {activeDelivery
+              ? "Complete your active delivery before claiming another offer."
+              : isOnline
+                ? `${orders.length} offers ready for claim`
+                : "Turn status Online to claim"}
+          &lt;/span>
+        &lt;/div>
+
+        {!isOnline ? (
+          &lt;EmptyState
+            icon={Power}
+            title="You are currently offline"
+            description="Go online to refresh the delivery feed and claim available campus orders."
+            actionText="Go Online"
+            onAction={handleAvailabilityChange}
+          />
+        ) : loading ? (
+          &lt;div className="p-12 text-center text-xs text-zinc-400">Loading delivery feed...&lt;/div>
+        ) : feedError ? (
+          &lt;EmptyState
+            icon={Bike}
+            title="Delivery feed unavailable"
+            description={feedError}
+            actionText="Retry"
+            onAction={() => loadFeed()}
+          />
+        ) : activeDelivery ? (
+          &lt;EmptyState
+            icon={Package}
+            title="Finish your active delivery first"
+            description="You can claim another delivery after this order has been completed."
+            actionText="Continue Delivery"
+            onAction={() => router.push("/rider/active-delivery")}
+          />
+        ) : orders.length === 0 ? (
+          &lt;EmptyState
+            icon={Bike}
+            title="No orders awaiting delivery"
+            description="Orders appear here after the shop confirms they are ready for pickup. This feed refreshes automatically while you are online."
+            actionText="Refresh Feed"
+            onAction={loadFeed}
+          />
+        ) : (
+          &lt;div className="space-y-4">
+            {orders.map((ord) => {
+              // Calculate estimated rider earning: approx 12% + min base ৳35
+              const riderEarning = Math.max(35, Math.round(ord.total * 0.12));
+
+              return (
+                &lt;Card key={ord.id} hoverEffect className="overflow-hidden">
+                  &lt;CardContent className="p-5 space-y-4">
+                    &lt;div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                      &lt;div className="flex items-center gap-2">
+                        &lt;span className="font-mono text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          #{ord.id}
+                        &lt;/span>
+                        &lt;span className="text-xs text-zinc-400">•&lt;/span>
+                        &lt;span className="text-xs text-zinc-500">
+                          {ord.items.reduce((s, i) => s + i.quantity, 0)} items
+                        &lt;/span>
+                      &lt;/div>
+
+                      &lt;div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/40">
+                        &lt;DollarSign className="h-3.5 w-3.5" />
+                        &lt;span>Earn: {formatCurrency(riderEarning)}&lt;/span>
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      {/* Pickup location */}
+                      &lt;div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 space-y-1">
+                        &lt;div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300 text-[11px] uppercase tracking-wider">
+                          &lt;Store className="h-3.5 w-3.5 text-amber-600" />
+                          &lt;span>Pickup Outlet&lt;/span>
+                        &lt;/div>
+                        &lt;p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
+                          {ord.shopName}
+                        &lt;/p>
+                        &lt;p className="text-zinc-400">{ord.shopLocation}&lt;/p>
+                      &lt;/div>
+
+                      {/* Drop-off location */}
+                      &lt;div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 space-y-1">
+                        &lt;div className="flex items-center gap-1.5 font-bold text-zinc-700 dark:text-zinc-300 text-[11px] uppercase tracking-wider">
+                          &lt;MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                          &lt;span>Drop-Off Destination&lt;/span>
+                        &lt;/div>
+                        &lt;p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
+                          {ord.deliveryAddressSnapshot}
+                        &lt;/p>
+                        &lt;p className="text-zinc-400">Customer: {ord.customerName}&lt;/p>
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;div className="pt-2 flex items-center justify-between">
+                      &lt;span className="text-[11px] text-zinc-400">
+                        Payment: &lt;strong>{ord.paymentMethod}&lt;/strong> (Escrow Protected)
+                      &lt;/span>
+
+                      &lt;Button
+                        variant="primary"
+                        size="md"
+                        isLoading={claimingId === ord.id}
+                        disabled={!!activeDelivery}
+                        onClick={() => handleClaim(ord.id)}
+                        className="rounded-xl font-bold text-xs"
+                      >
+                        &lt;CheckCircle2 className="h-4 w-4" />
+                        &lt;span>Claim Delivery&lt;/span>
+                      &lt;/Button>
+                    &lt;/div>
+                  &lt;/CardContent>
+                &lt;/Card>
+              );
+            })}
+          &lt;/div>
+        )}
+      &lt;/div>
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/shared/navbar";
+import { Footer } from "@/components/shared/footer";
+import { DemoRoleBanner } from "@/components/shared/demo-role-banner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { shopService } from "@/services/shop-service";
+import { formatCurrency } from "@/lib/utils";
+import { DEFAULT_DELIVERY_FEE, DEFAULT_PLATFORM_FEE } from "@/lib/constants";
+import {
+  Search,
+  Sparkles,
+  ShieldCheck,
+  Bike,
+  Clock,
+  ArrowRight,
+  Star,
+  MapPin,
+  Utensils,
+  GraduationCap,
+  Store,
+  ChevronRight,
+  CheckCircle2,
+} from "lucide-react";
+
+/**
+ * Function LandingPage.
+ * @returns {*} The operation result.
+ */
+export default function LandingPage() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [shops, setShops] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [shopError, setShopError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    shopService.listShops()
+      .then((res) => {
+        if (!active) return;
+        if (res.success) {
+          setShops(res.data);
+        } else {
+          setShopError(res.error.message);
+        }
+      })
+      .catch((error) => {
+        if (active) setShopError(error.message || "Unable to load campus shops.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const featuredShop = shops[0];
+
+  /**
+   * Arrow function handleSearchSubmit.
+   * @param {*} e - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push("/search");
+    }
+  };
+
+  return (
+    &lt;div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee] transition-colors">
+      &lt;DemoRoleBanner />
+      &lt;Navbar />
+
+      &lt;main className="flex-1">
+        {/* ================= HERO SECTION ================= */}
+        &lt;section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-zinc-200/60 dark:border-zinc-800/60">
+          {/* Subtle gradient backdrop */}
+          &lt;div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none -z-10 opacity-40 dark:opacity-20">
+            &lt;div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full bg-emerald-300/30 blur-3xl" />
+            &lt;div className="absolute top-[20%] right-[10%] w-[450px] h-[450px] rounded-full bg-amber-200/30 blur-3xl" />
+          &lt;/div>
+
+          &lt;div className="max-w-7xl mx-auto px-4 sm:px-6">
+            &lt;div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+              {/* Left Column: Heading &amp; Search */}
+              &lt;div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+                &lt;div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-semibold shadow-2xs">
+                  &lt;Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  &lt;span>University Dormitory Delivery Platform&lt;/span>
+                &lt;/div>
+
+                &lt;h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-[1.12]">
+                  Craving Campus Food? Delivered Right to Your{" "}
+                  &lt;span className="text-emerald-700 dark:text-emerald-400 underline decoration-emerald-300 dark:decoration-emerald-700 decoration-wavy decoration-2">
+                    Dorm Room.
+                  &lt;/span>
+                &lt;/h1>
+
+                &lt;p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                  Connect with campus canteens and fellow student riders. Browse menus publicly, then sign in when you are ready to place an order.
+                &lt;/p>
+
+                {/* Hero Search Box */}
+                &lt;form
+                  onSubmit={handleSearchSubmit}
+                  className="max-w-xl mx-auto lg:mx-0 flex items-center gap-2 p-1.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md ring-1 ring-zinc-900/5 dark:ring-white/10"
+                >
+                  &lt;div className="pl-3.5 text-zinc-400">
+                    &lt;Search className="h-5 w-5" />
+                  &lt;/div>
+                  &lt;input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search biryani, kacchi, burgers, tea, or canteens..."
+                    className="flex-1 bg-transparent px-2 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
+                  />
+                  &lt;Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    className="rounded-xl px-5 py-2.5 font-semibold shrink-0"
+                  >
+                    Search Food
+                  &lt;/Button>
+                &lt;/form>
+
+                {/* Micro trust indicators */}
+                &lt;div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 pt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  &lt;div className="flex items-center gap-1.5">
+                    &lt;CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    &lt;span>BDT {DEFAULT_DELIVERY_FEE + DEFAULT_PLATFORM_FEE} delivery and platform fees&lt;/span>
+                  &lt;/div>
+                  &lt;div className="flex items-center gap-1.5">
+                    &lt;CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    &lt;span>bKash &amp;amp; Cash on Delivery&lt;/span>
+                  &lt;/div>
+                  &lt;div className="flex items-center gap-1.5">
+                    &lt;CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    &lt;span>Verified QR Handover&lt;/span>
+                  &lt;/div>
+                &lt;/div>
+              &lt;/div>
+
+              {/* Right Column: Hero Visual Card */}
+              &lt;div className="lg:col-span-5 relative">
+                &lt;div className="relative mx-auto max-w-md rounded-3xl p-3 bg-gradient-to-tr from-emerald-600/20 via-zinc-200/40 to-amber-500/20 dark:from-emerald-500/10 dark:to-amber-500/10 border border-zinc-200/60 dark:border-zinc-800 shadow-xl backdrop-blur-md">
+                  &lt;div className="rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-md">
+                    &lt;div className="relative h-64 sm:h-72 w-full">
+                      &lt;img
+                        src={featuredShop?.bannerUrl || "/images/banner-placeholder.jpg"}
+                        alt={featuredShop?.name || "Campus food shops"}
+                        className="h-full w-full object-cover"
+                      />
+                      &lt;div className="absolute top-3 left-3">
+                        &lt;Badge variant="primary" size="md" className="shadow-md">
+                          {featuredShop ? "Featured Campus Shop" : "Campus Food Shops"}
+                        &lt;/Badge>
+                      &lt;/div>
+                      &lt;div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-medium">
+                        &lt;Clock className="h-3.5 w-3.5 text-emerald-400" />
+                        &lt;span>{featuredShop?.deliveryTimeMinutes ? `${featuredShop.deliveryTimeMinutes} mins` : "Browse menus"}&lt;/span>
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;div className="p-5 space-y-3">
+                      &lt;div className="flex items-center justify-between">
+                        &lt;h4 className="font-bold text-base text-zinc-900 dark:text-zinc-50">
+                          {featuredShop?.name || "Discover campus shops"}
+                        &lt;/h4>
+                        &lt;div className="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                          &lt;Star className="h-3.5 w-3.5 fill-current" />
+                          &lt;span>{featuredShop ? `${featuredShop.rating} rating` : "Public shop browsing"}&lt;/span>
+                        &lt;/div>
+                      &lt;/div>
+
+                      &lt;p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {featuredShop?.description || "Explore menus from university food outlets without signing in."}
+                      &lt;/p>
+
+                      &lt;div className="pt-2 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800">
+                        &lt;span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                          {featuredShop?.campusLocation || "Campus-wide"}
+                        &lt;/span>
+                        &lt;Link href={featuredShop ? `/shops/${featuredShop.id}` : "/search"}>
+                          &lt;Button variant="primary" size="sm" className="rounded-xl">
+                            View Menu &lt;ArrowRight className="h-3.5 w-3.5" />
+                          &lt;/Button>
+                        &lt;/Link>
+                      &lt;/div>
+                    &lt;/div>
+                  &lt;/div>
+
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        &lt;/section>
+
+        {/* ================= CAMPUS METRICS TICKER ================= */}
+        &lt;section className="py-8 bg-emerald-900 text-white dark:bg-zinc-950 border-b border-emerald-800 dark:border-zinc-800">
+          &lt;div className="max-w-7xl mx-auto px-4 sm:px-6">
+            &lt;div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              &lt;div className="space-y-1">
+                &lt;div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
+                  {shops.length}
+                &lt;/div>
+                &lt;div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
+                  Approved Campus Canteens
+                &lt;/div>
+              &lt;/div>
+              &lt;div className="space-y-1">
+                &lt;div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
+                  BDT {DEFAULT_DELIVERY_FEE + DEFAULT_PLATFORM_FEE}
+                &lt;/div>
+                &lt;div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
+                  Delivery + Platform Fees
+                &lt;/div>
+              &lt;/div>
+              &lt;div className="space-y-1">
+                &lt;div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
+                  Public
+                &lt;/div>
+                &lt;div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
+                  No Login Needed to Browse
+                &lt;/div>
+              &lt;/div>
+              &lt;div className="space-y-1">
+                &lt;div className="text-2xl sm:text-3xl font-extrabold text-emerald-300">
+                  Live
+                &lt;/div>
+                &lt;div className="text-xs text-emerald-100 dark:text-zinc-400 font-medium">
+                  Shop Data from Backend
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        &lt;/section>
+
+        {/* ================= FEATURED SHOPS GRID ================= */}
+        &lt;section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6">
+          &lt;div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
+            &lt;div>
+              &lt;div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2">
+                &lt;Utensils className="h-3.5 w-3.5" />
+                &lt;span>Campus Favorites&lt;/span>
+              &lt;/div>
+              &lt;h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                Discover Verified University Food Outlets
+              &lt;/h2>
+            &lt;/div>
+            &lt;Link href="/search">
+              &lt;Button variant="outline" size="sm" className="rounded-xl">
+                View All Canteens &lt;ChevronRight className="h-4 w-4" />
+              &lt;/Button>
+            &lt;/Link>
+          &lt;/div>
+
+          {loading ? (
+            &lt;p role="status" className="py-12 text-center text-sm text-zinc-500">Loading campus shops...&lt;/p>
+          ) : shopError ? (
+            &lt;p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+              {shopError}
+            &lt;/p>
+          ) : shops.length === 0 ? (
+            &lt;p className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
+              No campus shops are available right now.
+            &lt;/p>
+          ) : (
+          &lt;div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {shops.map((shop) => (
+              &lt;Link key={shop.id} href={`/shops/${shop.id}`} className="group">
+                &lt;Card hoverEffect className="h-full flex flex-col">
+                  &lt;div className="relative h-48 w-full overflow-hidden">
+                    &lt;img
+                      src={shop.bannerUrl}
+                      alt={shop.name}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    &lt;div className="absolute top-3 left-3">
+                      &lt;Badge variant="default" size="sm" className="bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-white backdrop-blur-md shadow-xs">
+                        {shop.cuisine}
+                      &lt;/Badge>
+                    &lt;/div>
+                    &lt;div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1">
+                      &lt;Clock className="h-3 w-3 text-emerald-400" />
+                      &lt;span>{shop.deliveryTimeMinutes} mins&lt;/span>
+                    &lt;/div>
+                  &lt;/div>
+
+                  &lt;CardContent className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                    &lt;div>
+                      &lt;div className="flex items-center justify-between">
+                        &lt;h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                          {shop.name}
+                        &lt;/h3>
+                        &lt;div className="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                          &lt;Star className="h-3.5 w-3.5 fill-current" />
+                          &lt;span>{shop.rating}&lt;/span>
+                        &lt;/div>
+                      &lt;/div>
+
+                      &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                        {shop.description}
+                      &lt;/p>
+                    &lt;/div>
+
+                    &lt;div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                      &lt;span className="flex items-center gap-1 truncate max-w-[190px]">
+                        &lt;MapPin className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                        &lt;span className="truncate">{shop.campusLocation}&lt;/span>
+                      &lt;/span>
+                      &lt;span className="font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
+                        Min. {formatCurrency(shop.minimumOrder)}
+                      &lt;/span>
+                    &lt;/div>
+                  &lt;/CardContent>
+                &lt;/Card>
+              &lt;/Link>
+            ))}
+          &lt;/div>
+          )}
+        &lt;/section>
+
+        {/* ================= ROLE PATHWAYS ================= */}
+        &lt;section className="py-16 sm:py-20 bg-zinc-100/60 dark:bg-zinc-900/40 border-y border-zinc-200/80 dark:border-zinc-800/80">
+          &lt;div className="max-w-7xl mx-auto px-4 sm:px-6">
+            &lt;div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
+              &lt;h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                Engineered for the Entire Campus Community
+              &lt;/h2>
+              &lt;p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                Whether you need a late-night feast during exam prep, run a university canteen, or want flexible earnings between classes.
+              &lt;/p>
+            &lt;/div>
+
+            &lt;div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Student */}
+              &lt;div className="rounded-2xl p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between space-y-5">
+                &lt;div className="space-y-3">
+                  &lt;div className="h-12 w-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+                    &lt;GraduationCap className="h-6 w-6" />
+                  &lt;/div>
+                  &lt;h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                    For Campus Students
+                  &lt;/h3>
+                  &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Order from all campus halls and canteens. Track your delivery rider on the campus map and verify handovers securely via QR code.
+                  &lt;/p>
+                &lt;/div>
+                &lt;Link href="/signup?role=student">
+                  &lt;Button variant="secondary" size="md" className="w-full">
+                    Register as Student &lt;ArrowRight className="h-4 w-4" />
+                  &lt;/Button>
+                &lt;/Link>
+              &lt;/div>
+
+              {/* Shop Owner */}
+              &lt;div className="rounded-2xl p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between space-y-5">
+                &lt;div className="space-y-3">
+                  &lt;div className="h-12 w-12 rounded-2xl bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 flex items-center justify-center">
+                    &lt;Store className="h-6 w-6" />
+                  &lt;/div>
+                  &lt;h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                    For Food Shop Owners
+                  &lt;/h3>
+                  &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Expand canteen revenue into every dormitory. Manage live incoming orders, menu stock, and automated 85% escrow payouts.
+                  &lt;/p>
+                &lt;/div>
+                &lt;Link href="/signup?role=shop_owner">
+                  &lt;Button variant="secondary" size="md" className="w-full">
+                    Apply as Shop Partner &lt;ArrowRight className="h-4 w-4" />
+                  &lt;/Button>
+                &lt;/Link>
+              &lt;/div>
+
+              {/* Rider */}
+              &lt;div className="rounded-2xl p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between space-y-5">
+                &lt;div className="space-y-3">
+                  &lt;div className="h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 flex items-center justify-center">
+                    &lt;Bike className="h-6 w-6" />
+                  &lt;/div>
+                  &lt;h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                    For Student Riders
+                  &lt;/h3>
+                  &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Earn 12% on every delivery on your bicycle or walking between classes. Flexible schedule, instant wallet credits, and campus tips.
+                  &lt;/p>
+                &lt;/div>
+                &lt;Link href="/signup?role=rider">
+                  &lt;Button variant="secondary" size="md" className="w-full">
+                    Deliver &amp;amp; Earn &lt;ArrowRight className="h-4 w-4" />
+                  &lt;/Button>
+                &lt;/Link>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        &lt;/section>
+
+        {/* ================= ESCROW &amp; SECURITY BANNER ================= */}
+        &lt;section className="py-16 max-w-7xl mx-auto px-4 sm:px-6">
+          &lt;div className="rounded-3xl p-8 sm:p-12 bg-gradient-to-r from-emerald-900 to-emerald-950 text-white relative overflow-hidden shadow-xl">
+            &lt;div className="relative z-10 max-w-2xl space-y-4">
+              &lt;Badge variant="default" size="sm" className="bg-emerald-800 text-emerald-200 border-emerald-700">
+                🔒 Built-In Financial Escrow
+              &lt;/Badge>
+              &lt;h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+                Zero Stress Ordering with Verifiable QR Handovers
+              &lt;/h2>
+              &lt;p className="text-sm text-emerald-100/90 leading-relaxed">
+                Your payment is securely held in platform escrow until you scan the handover code at your dorm gate. Neither shop nor rider receives disbursement until food is delivered.
+              &lt;/p>
+              &lt;div className="pt-2 flex flex-wrap gap-3">
+                &lt;Link href="/search">
+                  &lt;Button variant="primary" size="lg" className="bg-white text-emerald-900 hover:bg-emerald-50">
+                    Start Ordering Food
+                  &lt;/Button>
+                &lt;/Link>
+                &lt;Link href="/signup">
+                  &lt;Button variant="outline" size="lg" className="border-emerald-600 text-white bg-transparent hover:bg-emerald-800">
+                    Create an Account
+                  &lt;/Button>
+                &lt;/Link>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        &lt;/section>
+      &lt;/main>
+
+      &lt;Footer />
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

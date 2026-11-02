@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: lib/email/mailer.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: lib/email/mailer.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { accessSync, constants } from "node:fs";
+import path from "node:path";
+import nodemailer from "nodemailer";
+
+/**
+ * CampusEats Centralized Nodemailer Service
+ * Uses a local sendmail-compatible mail transfer agent.
+ * Strictly escapes user inputs and enforces attachment whitelist.
+ */
+
+const SENDMAIL_PATH = process.env.SENDMAIL_PATH?.trim() || "sendmail";
+const EMAIL_FROM = process.env.EMAIL_FROM || "CampusEats &lt;no-reply@campuseats.edu.bd>";
+
+/**
+ * Function resolveSendmailExecutable.
+ * @param {*} command - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
+function resolveSendmailExecutable(command) {
+  /**
+   * Arrow function canExecute.
+   * @param {*} filePath - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const canExecute = (filePath) => {
+    try {
+      accessSync(filePath, constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const hasPath = command.includes("/") || command.includes("\\");
+  const extensions =
+    process.platform === "win32"
+      ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
+      : [""];
+  const candidates = hasPath
+    ? [command]
+    : (process.env.PATH || "")
+        .split(path.delimiter)
+        .filter(Boolean)
+        .flatMap((directory) =>
+          extensions.map((extension) =>
+            path.join(directory, command + extension)
+          )
+        );
+  return candidates.find(canExecute) || null;
+}
+
+const sendmailExecutable = resolveSendmailExecutable(SENDMAIL_PATH);
+const transporter = sendmailExecutable
+  ? nodemailer.createTransport({
+      sendmail: true,
+      newline: "unix",
+      path: sendmailExecutable,
+    })
+  : null;
+
+/**
+ * HTML escaper to prevent email template injection / XSS.
+ */
+function escapeHtml(str) {
+  if (typeof str !== "string") return "";
+  return str
+    .replace(/&amp;/g, "&amp;amp;")
+    .replace(/&lt;/g, "&amp;lt;")
+    .replace(/>/g, "&amp;gt;")
+    .replace(/"/g, "&amp;quot;")
+    .replace(/'/g, "&amp;#039;");
+}
+
+/**
+ * Validates and sanitizes email attachments.
+ * Prevents path traversal and restricts to known safe types.
+ */
+const ALLOWED_MIME_TYPES = ["application/pdf", "text/plain", "image/png", "image/jpeg"];
+const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Function validateAttachment.
+ * @param {*} attachment - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
+export function validateAttachment(attachment) {
+  if (!attachment) return null;
+
+  // Validate filename
+  const filename = attachment.filename || "invoice.pdf";
+  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  // Validate MIME
+  const contentType = attachment.contentType || "application/pdf";
+  if (!ALLOWED_MIME_TYPES.includes(contentType)) {
+    throw new Error(`Disallowed attachment type: ${contentType}`);
+  }
+
+  // Validate size if content is Buffer or string
+  if (attachment.content) {
+    const size = Buffer.byteLength(attachment.content);
+    if (size > MAX_ATTACHMENT_SIZE_BYTES) {
+      throw new Error(`Attachment exceeds 5MB size limit (${size} bytes)`);
+    }
+  }
+
+  return {
+    filename: sanitizedFilename,
+    content: attachment.content,
+    contentType,
+  };
+}
+
+/**
+ * Core sendMail function. Email failures must not abort business transactions.
+ */
+export async function sendEmail({ to, subject, html, text, attachments = [] }) {
+  if (!to || typeof to !== "string" || !to.includes("@")) {
+    return { success: false, reason: "invalid_recipient" };
+  }
+  if (process.env.NODE_ENV === "test" || !transporter) {
+    const reason =
+      process.env.NODE_ENV === "test" ? "test_mode" : "sendmail_unavailable";
+    if (reason === "sendmail_unavailable") {
+      console.warn("[Mailer] Sendmail is unavailable; email was not sent.");
+    }
+    return {
+      success: false,
+      mode: "unavailable",
+      reason,
+    };
+  }
+
+  const cleanAttachments = [];
+  for (const attachment of attachments) {
+    const valid = validateAttachment(attachment);
+    if (valid) cleanAttachments.push(valid);
+  }
+
+  const plainText = text || (html ? html.replace(/&lt;[^>]+>/g, " ") : "");
+  const mailOptions = {
+    from: EMAIL_FROM,
+    to: to.trim(),
+    subject: typeof subject === "string" ? subject.trim() : "",
+    text: plainText,
+    html: html || `&lt;p>${escapeHtml(plainText)}&lt;/p>`,
+    attachments: cleanAttachments,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return {
+      success: true,
+      mode: "sendmail_accepted",
+      messageId: info.messageId,
+      recipient: to,
+    };
+  } catch (error) {
+    console.error("[Mailer] Sendmail delivery failed.", error.code || "unknown error");
+    return {
+      success: false,
+      mode: "failed",
+      reason: "sendmail_delivery_failed",
+      recipient: to,
+    };
+  }
+}
+
+/**
+ * Standard Email Templates for CampusEats Lifecycle Events
+ */
+
+export const emailTemplates = {
+  /**
+   * Method orderPlaced.
+   * @param {*} order - Input value used by the operation.
+   * @param {*} customer - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  orderPlaced(order, customer) {
+    return {
+      subject: `[CampusEats] Order #${order.id} Confirmed at ${order.shopName}`,
+      html: `
+        &lt;div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #18241c;">
+          &lt;h2 style="color: #047857;">Order Confirmed!&lt;/h2>
+          &lt;p>Hello ${escapeHtml(customer?.name || "Student")},&lt;/p>
+          &lt;p>Your order &lt;strong>#${escapeHtml(order.id)}&lt;/strong> has been placed with &lt;strong>${escapeHtml(order.shopName)}&lt;/strong>.&lt;/p>
+          &lt;div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            &lt;p style="margin: 4px 0;">&lt;strong>Delivery To:&lt;/strong> ${escapeHtml(order.deliveryAddressSnapshot)}&lt;/p>
+            &lt;p style="margin: 4px 0;">&lt;strong>Total Amount:&lt;/strong> ৳${order.total}&lt;/p>
+            &lt;p style="margin: 4px 0;">&lt;strong>Escrow Status:&lt;/strong> Payment safely held in Escrow&lt;/p>
+          &lt;/div>
+          &lt;p>The shop is preparing your meal. A student rider will be assigned shortly.&lt;/p>
+          &lt;hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          &lt;p style="font-size: 12px; color: #6b7280;">CampusEats — University Peer-to-Peer Dormitory Food Delivery&lt;/p>
+        &lt;/div>
+      `,
+    };
+  },
+
+  /**
+   * Section 8 requirement:
+   * "On the actual picked_up event, send separate notifications to:
+   *  1. the student/customer who placed the order; and
+   *  2. the owner of the shop that prepared it."
+   */
+  orderPickedUpCustomer(order, customer, rider) {
+    return {
+      subject: `[CampusEats] Order #${order.id} is On The Way to Your Dorm!`,
+      html: `
+        &lt;div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #18241c;">
+          &lt;h2 style="color: #2563eb;">Your Food Has Been Picked Up!&lt;/h2>
+          &lt;p>Hello ${escapeHtml(customer?.name || "Student")},&lt;/p>
+          &lt;p>Rider &lt;strong>${escapeHtml(rider?.name || "Campus Rider")}&lt;/strong> (${escapeHtml(rider?.phone || "Phone verified")}) has picked up your food from &lt;strong>${escapeHtml(order.shopName)}&lt;/strong> and is en route to your dorm.&lt;/p>
+          &lt;div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            &lt;p style="margin: 4px 0;">&lt;strong>Destination:&lt;/strong> ${escapeHtml(order.deliveryAddressSnapshot)}&lt;/p>
+            &lt;p style="margin: 4px 0;">&lt;strong>Your Delivery Handover Code:&lt;/strong> &lt;span style="font-size: 20px; font-weight: bold; letter-spacing: 2px;">${escapeHtml(order.deliveryVerificationCode || "----")}&lt;/span>&lt;/p>
+            &lt;p style="margin: 4px 0; font-size: 13px; color: #4b5563;">Provide this code to the rider when they arrive at your dorm lobby to confirm delivery.&lt;/p>
+          &lt;/div>
+          &lt;p>Enjoy your meal!&lt;/p>
+          &lt;hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          &lt;p style="font-size: 12px; color: #6b7280;">CampusEats University Delivery Service&lt;/p>
+        &lt;/div>
+      `,
+    };
+  },
+
+  /**
+   * Method orderPickedUpShopOwner.
+   * @param {*} order - Input value used by the operation.
+   * @param {*} shopOwner - Input value used by the operation.
+   * @param {*} rider - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  orderPickedUpShopOwner(order, shopOwner, rider) {
+    return {
+      subject: `[CampusEats] Order #${order.id} Picked Up by Rider ${rider?.name || ""}`,
+      html: `
+        &lt;div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #18241c;">
+          &lt;h2 style="color: #d97706;">Package Dispatched from Shop&lt;/h2>
+          &lt;p>Hello ${escapeHtml(shopOwner?.name || "Shop Manager")},&lt;/p>
+          &lt;p>Rider &lt;strong>${escapeHtml(rider?.name || "Campus Rider")}&lt;/strong> (${escapeHtml(rider?.phone || "")}) has verified pickup and collected order &lt;strong>#${escapeHtml(order.id)}&lt;/strong> from your counter.&lt;/p>
+          &lt;div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            &lt;p style="margin: 4px 0;">&lt;strong>Order Total:&lt;/strong> ৳${order.total}&lt;/p>
+            &lt;p style="margin: 4px 0;">&lt;strong>Status:&lt;/strong> Handed over to rider for dorm delivery&lt;/p>
+          &lt;/div>
+          &lt;p>Escrow funds will be settled into your canteen balance as soon as the student enters their receipt code.&lt;/p>
+          &lt;hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          &lt;p style="font-size: 12px; color: #6b7280;">CampusEats Merchant Operations&lt;/p>
+        &lt;/div>
+      `,
+    };
+  },
+
+  /**
+   * Method orderDeliveredCustomer.
+   * @param {*} order - Input value used by the operation.
+   * @param {*} customer - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  orderDeliveredCustomer(order, customer) {
+    return {
+      subject: `[CampusEats] Order #${order.id} Successfully Delivered!`,
+      html: `
+        &lt;div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #18241c;">
+          &lt;h2 style="color: #059669;">Delivered!&lt;/h2>
+          &lt;p>Hello ${escapeHtml(customer?.name || "Student")},&lt;/p>
+          &lt;p>Your order &lt;strong>#${escapeHtml(order.id)}&lt;/strong> has been marked as delivered at ${escapeHtml(order.deliveryAddressSnapshot)}.&lt;/p>
+          &lt;p>The escrow payment of ৳${order.total} has been settled. Please take a moment to rate your meal and rider experience!&lt;/p>
+          &lt;hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          &lt;p style="font-size: 12px; color: #6b7280;">Thank you for ordering with CampusEats.&lt;/p>
+        &lt;/div>
+      `,
+    };
+  },
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

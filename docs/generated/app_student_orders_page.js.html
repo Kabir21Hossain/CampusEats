@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/student/orders/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/student/orders/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { orderService } from "@/services/order-service";
+import { usePolling } from "@/hooks/use-polling";
+import { useAuth } from "@/context/auth-context";
+import { useCart } from "@/context/cart-context";
+import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/constants";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  Package,
+  Store,
+  Clock,
+  ArrowRight,
+  RotateCcw,
+  CheckCircle2,
+  ChevronRight,
+} from "lucide-react";
+import { toast } from "sonner";
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
+
+/**
+ * Function StudentOrdersPage.
+ * @returns {*} The operation result.
+ */
+export default function StudentOrdersPage() {
+  const { currentUser } = useAuth();
+  const { addItem } = useCart();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+
+  const loadOrders = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const res = await orderService.listOrders();
+    if (res.success) {
+      setOrders(res.data);
+      setLoadError("");
+    } else {
+      setLoadError(res.error?.message || "Unable to load your orders.");
+    }
+    if (showLoading) setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) loadOrders();
+  }, [currentUser?.id, loadOrders]);
+
+  usePolling(() => {
+    if (currentUser) loadOrders(false);
+  }, 10000);
+
+  const activeOrders = orders.filter((o) =>
+    [
+      ORDER_STATUS.PLACED,
+      ORDER_STATUS.CONFIRMED,
+      ORDER_STATUS.AWAITING_RIDER,
+      ORDER_STATUS.CLAIMED,
+      ORDER_STATUS.PICKED_UP,
+    ].includes(o.status)
+  );
+
+  const completedOrders = orders.filter((o) => o.status === ORDER_STATUS.DELIVERED);
+  const cancelledOrders = orders.filter((o) =>
+    [ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED].includes(o.status)
+  );
+
+  const tabs = [
+    { id: "all", label: "All Orders", count: orders.length },
+    { id: "active", label: "Active Orders", count: activeOrders.length },
+    { id: "completed", label: "Completed", count: completedOrders.length },
+    { id: "cancelled", label: "Cancelled &amp; declined", count: cancelledOrders.length },
+  ];
+
+  const displayedOrders =
+    activeTab === "active"
+      ? activeOrders
+      : activeTab === "completed"
+      ? completedOrders
+      : activeTab === "cancelled"
+      ? cancelledOrders
+      : orders;
+
+  /**
+   * Arrow function handleReorder.
+   * @param {*} order - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const handleReorder = (order) => {
+    order.items.forEach((item) => {
+      addItem(
+        {
+          id: item.menuItemId,
+          name: item.name,
+          priceBDT: item.priceAtOrder,
+          photoUrl:
+            "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+        },
+        { id: order.shopId, name: order.shopName }
+      );
+    });
+    toast.success(`Items from ${order.shopName} added to cart!`);
+  };
+
+  return (
+    &lt;div className="space-y-6 pb-16 max-w-4xl mx-auto">
+      &lt;div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        &lt;div>
+          &lt;h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+            My Order History
+          &lt;/h1>
+          &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Track active deliveries and review previous dormitory meals
+          &lt;/p>
+        &lt;/div>
+
+        &lt;Link href="/student/home">
+          &lt;Button variant="primary" size="sm" className="rounded-xl">
+            Order New Food
+          &lt;/Button>
+        &lt;/Link>
+      &lt;/div>
+
+      {/* Tabs */}
+      {!loading &amp;&amp; !loadError &amp;&amp; (
+        &lt;DashboardAnalytics orders={orders} role="student" />
+      )}
+      &lt;Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {loadError &amp;&amp; orders.length > 0 &amp;&amp; (
+        &lt;p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          Showing the latest loaded orders. Refresh failed: {loadError}
+        &lt;/p>
+      )}
+
+      {/* Orders List */}
+      {loading ? (
+        &lt;div className="p-12 text-center text-xs text-zinc-400">Loading orders...&lt;/div>
+      ) : loadError &amp;&amp; orders.length === 0 ? (
+        &lt;EmptyState
+          icon={Package}
+          title="Orders unavailable"
+          description={loadError}
+          actionText="Try again"
+          onAction={() => loadOrders()}
+        />
+      ) : displayedOrders.length === 0 ? (
+        &lt;EmptyState
+          icon={Package}
+          title="No orders found"
+          description="You don't have any orders matching this category."
+          actionText="Browse Canteens"
+          onAction={() => (window.location.href = "/student/home")}
+        />
+      ) : (
+        &lt;div className="space-y-4">
+          {displayedOrders.map((order) => (
+            &lt;Card key={order.id} hoverEffect className="overflow-hidden">
+              &lt;CardContent className="p-5 space-y-4">
+                &lt;div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                  &lt;div className="flex items-center gap-2">
+                    &lt;span className="font-mono text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      #{order.id}
+                    &lt;/span>
+                    &lt;span className="text-xs text-zinc-400">•&lt;/span>
+                    &lt;span className="text-xs text-zinc-500">{formatDate(order.createdAt)}&lt;/span>
+                  &lt;/div>
+
+                  &lt;span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                      ORDER_STATUS_COLORS[order.status] || "bg-zinc-100 text-zinc-800"
+                    }`}
+                  >
+                    {ORDER_STATUS_LABELS[order.status] || order.status}
+                  &lt;/span>
+                &lt;/div>
+
+                &lt;div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  &lt;div className="space-y-1">
+                    &lt;div className="flex items-center gap-1.5 font-bold text-sm text-zinc-800 dark:text-zinc-200">
+                      &lt;Store className="h-4 w-4 text-emerald-600" />
+                      &lt;span>{order.shopName}&lt;/span>
+                    &lt;/div>
+                    &lt;p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ")}
+                    &lt;/p>
+                    &lt;p className="text-[11px] text-zinc-400">
+                      Deliver to: {order.deliveryAddressSnapshot}
+                    &lt;/p>
+                  &lt;/div>
+
+                  &lt;div className="flex items-center gap-4 sm:text-right shrink-0">
+                    &lt;div>
+                      &lt;div className="text-[11px] text-zinc-400">Total Paid&lt;/div>
+                      &lt;div className="text-base font-extrabold text-emerald-700 dark:text-emerald-400">
+                        {formatCurrency(order.total)}
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;div className="flex items-center gap-2">
+                      &lt;Link href={`/student/orders/${order.id}`}>
+                        &lt;Button variant="primary" size="sm" className="rounded-xl text-xs">
+                          &lt;span>Track Order&lt;/span>
+                          &lt;ChevronRight className="h-4 w-4" />
+                        &lt;/Button>
+                      &lt;/Link>
+
+                      {order.status === ORDER_STATUS.DELIVERED &amp;&amp; (
+                        &lt;Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReorder(order)}
+                          className="rounded-xl text-xs"
+                          title="Add items to cart again"
+                        >
+                          &lt;RotateCcw className="h-3.5 w-3.5" />
+                          &lt;span className="hidden sm:inline">Reorder&lt;/span>
+                        &lt;/Button>
+                      )}
+                    &lt;/div>
+                  &lt;/div>
+                &lt;/div>
+              &lt;/CardContent>
+            &lt;/Card>
+          ))}
+        &lt;/div>
+      )}
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

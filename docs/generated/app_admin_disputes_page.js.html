@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/admin/disputes/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/admin/disputes/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import { adminService } from "@/services/admin-service";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  DollarSign,
+  ShieldCheck,
+  Scale,
+} from "lucide-react";
+import { toast } from "sonner";
+
+/**
+ * Function AdminDisputesPage.
+ * @returns {*} The operation result.
+ */
+export default function AdminDisputesPage() {
+  const [disputes, setDisputes] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
+
+  // Resolution modal
+  const [activeDispute, setActiveDispute] = useState(null);
+  const [resolutionText, setResolutionText] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const loadDisputes = useCallback(async () => {
+    setLoading(true);
+    const response = await adminService.getDisputes({ page, limit: 20 });
+    if (response.success) {
+      setDisputes(response.data);
+      setMeta(response.meta);
+      setError("");
+      if (page > Math.max(1, response.meta.totalPages || 1)) {
+        setPage(Math.max(1, response.meta.totalPages || 1));
+      }
+    } else {
+      setError(response.error.message);
+    }
+    setLoading(false);
+  }, [page]);
+
+  useEffect(() => {
+    loadDisputes();
+  }, [loadDisputes]);
+
+  /**
+   * Arrow function handleOpenResolveModal.
+   * @param {*} disp - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const handleOpenResolveModal = (disp) => {
+    setActiveDispute(disp);
+    setRefundAmount(disp.amountBDT.toString());
+    setResolutionText(`Approved full refund of ৳${disp.amountBDT} credited back to customer wallet.`);
+  };
+
+  /**
+   * Arrow function handleResolveSubmit.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleResolveSubmit = async (e) => {
+    e.preventDefault();
+    if (!resolutionText.trim()) {
+      toast.error("Please enter a resolution decision explanation");
+      return;
+    }
+
+    setActionLoading(true);
+    const res = await adminService.resolveDispute(activeDispute.id, {
+      resolution: resolutionText,
+      refundAmount: parseFloat(refundAmount) || 0,
+    });
+    setActionLoading(false);
+
+    if (res.success) {
+      toast.success(`Dispute #${activeDispute.id} resolved successfully!`);
+      setActiveDispute(null);
+      loadDisputes();
+    } else {
+      toast.error(res.error.message);
+    }
+  };
+
+  return (
+    &lt;div className="space-y-6 pb-16 max-w-5xl mx-auto">
+      &lt;div>
+        &lt;h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          Campus Order Dispute Resolution
+        &lt;/h1>
+        &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+          Review customer incident reports, inspect evidence, and authorize escrow refunds
+        &lt;/p>
+      &lt;/div>
+
+      {error ? (
+        &lt;div role="alert" className="p-8 rounded-2xl border border-amber-200 bg-amber-50 text-center text-sm text-amber-800">
+          Dispute management is unavailable: {error}
+        &lt;/div>
+      ) : loading ? (
+        &lt;div className="p-12 text-center text-xs text-zinc-400">Loading disputes...&lt;/div>
+      ) : disputes.length === 0 ? (
+        &lt;div className="p-12 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400">
+          No disputes recorded on the platform.
+        &lt;/div>
+      ) : (
+        &lt;div className="space-y-4">
+          {disputes.map((disp) => (
+            &lt;Card
+              key={disp.id}
+              className={disp.status === "pending" ? "border-rose-300 dark:border-rose-900/60" : ""}
+            >
+              &lt;CardContent className="p-6 space-y-4">
+                &lt;div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                  &lt;div className="flex items-center gap-3">
+                    &lt;span className="font-mono text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      Dispute #{disp.id}
+                    &lt;/span>
+                    &lt;span className="text-xs text-zinc-400">•&lt;/span>
+                    &lt;span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      Order #{disp.orderId}
+                    &lt;/span>
+                  &lt;/div>
+
+                  &lt;Badge
+                    variant={disp.status === "pending" ? "rose" : "default"}
+                    size="md"
+                    className="font-bold text-xs"
+                  >
+                    {disp.status === "pending" ? "● Awaiting Arbitration" : "Resolved"}
+                  &lt;/Badge>
+                &lt;/div>
+
+                &lt;div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  &lt;div className="space-y-1.5">
+                    &lt;p className="text-zinc-500">
+                      Opened by: &lt;strong>{disp.openedByName}&lt;/strong> • {formatDate(disp.createdAt)}
+                    &lt;/p>
+                    &lt;p className="text-zinc-800 dark:text-zinc-200 font-bold">
+                      Reason: &lt;span className="text-rose-600">{disp.reason}&lt;/span>
+                    &lt;/p>
+                    &lt;div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-300">
+                      &lt;span className="font-semibold block text-zinc-700 dark:text-zinc-200 mb-0.5">
+                        Submitted Evidence:
+                      &lt;/span>
+                      {disp.evidence}
+                    &lt;/div>
+                  &lt;/div>
+
+                  &lt;div className="space-y-2 sm:border-l sm:border-zinc-100 dark:sm:border-zinc-800 sm:pl-4">
+                    &lt;div className="flex justify-between items-center">
+                      &lt;span className="text-zinc-400">Canteen Involved:&lt;/span>
+                      &lt;strong className="text-zinc-800 dark:text-zinc-200">{disp.shopName}&lt;/strong>
+                    &lt;/div>
+                    &lt;div className="flex justify-between items-center">
+                      &lt;span className="text-zinc-400">Rider Assigned:&lt;/span>
+                      &lt;strong className="text-zinc-800 dark:text-zinc-200">{disp.riderName}&lt;/strong>
+                    &lt;/div>
+                    &lt;div className="flex justify-between items-center">
+                      &lt;span className="text-zinc-400">Disputed Value:&lt;/span>
+                      &lt;strong className="text-base text-rose-600">
+                        {formatCurrency(disp.amountBDT)}
+                      &lt;/strong>
+                    &lt;/div>
+
+                    {disp.resolution &amp;&amp; (
+                      &lt;div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/50 text-emerald-800 dark:text-emerald-300 mt-2">
+                        &lt;span className="font-bold block text-[11px] mb-0.5">
+                          Resolution Decision:
+                        &lt;/span>
+                        {disp.resolution}
+                      &lt;/div>
+                    )}
+                  &lt;/div>
+                &lt;/div>
+
+                {disp.status === "pending" &amp;&amp; (
+                  &lt;div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+                    &lt;Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleOpenResolveModal(disp)}
+                      className="rounded-xl font-bold text-xs bg-purple-700 hover:bg-purple-800 text-white"
+                    >
+                      &lt;Scale className="h-4 w-4 mr-1.5" />
+                      &lt;span>Issue Authorized Resolution &amp;amp; Refund&lt;/span>
+                    &lt;/Button>
+                  &lt;/div>
+                )}
+              &lt;/CardContent>
+            &lt;/Card>
+          ))}
+        &lt;/div>
+      )}
+      &lt;div className="flex items-center justify-between text-sm text-zinc-500">
+        &lt;span>{meta.total} dispute(s)&lt;/span>
+        &lt;div className="flex items-center gap-2">
+          &lt;Button variant="outline" size="sm" disabled={page &lt;= 1 || loading} onClick={() => setPage((value) => value - 1)}>Previous&lt;/Button>
+          &lt;span>{page} / {Math.max(1, meta.totalPages || 1)}&lt;/span>
+          &lt;Button variant="outline" size="sm" disabled={page >= (meta.totalPages || 1) || loading} onClick={() => setPage((value) => value + 1)}>Next&lt;/Button>
+        &lt;/div>
+      &lt;/div>
+
+      {/* Resolution Decision Modal */}
+      &lt;Modal
+        isOpen={!!activeDispute}
+        onClose={() => setActiveDispute(null)}
+        title={`Arbitrate Dispute — #${activeDispute?.id}`}
+        description="Authorize financial refund and record auditable resolution notes."
+      >
+        &lt;form onSubmit={handleResolveSubmit} className="space-y-4 text-left">
+          &lt;Input
+            label="Refund Amount (BDT ৳)"
+            type="number"
+            value={refundAmount}
+            onChange={(e) => setRefundAmount(e.target.value)}
+            required
+          />
+
+          &lt;div className="space-y-1.5">
+            &lt;label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              Resolution Decision Notes (Audited)
+            &lt;/label>
+            &lt;textarea
+              rows={3}
+              value={resolutionText}
+              onChange={(e) => setResolutionText(e.target.value)}
+              className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 text-xs text-zinc-900 dark:text-zinc-100"
+              required
+            />
+          &lt;/div>
+
+          &lt;div className="flex gap-2">
+            &lt;Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => setActiveDispute(null)}
+              className="flex-1 rounded-xl"
+            >
+              Cancel
+            &lt;/Button>
+            &lt;Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={actionLoading}
+              className="flex-1 rounded-xl font-bold bg-purple-700 hover:bg-purple-800 text-white"
+            >
+              Apply Settlement
+            &lt;/Button>
+          &lt;/div>
+        &lt;/form>
+      &lt;/Modal>
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

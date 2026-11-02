@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/api/orders/[orderId]/route.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/api/orders/[orderId]/route.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { NextResponse } from "next/server";
+import { getCollection } from "@/lib/db";
+import { ORDER_STATUS, ROLES } from "@/lib/constants";
+import {
+  isOrderParticipant,
+  isShopOwner,
+  isStudentOrderOwner,
+  requireSession,
+  serializeOrderForUser,
+} from "@/lib/auth-server";
+
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise&lt;*>} Resolves with the operation result.
+ */
+export async function GET(request, { params }) {
+  try {
+    const { user, errorResponse } = await requireSession(request);
+    if (errorResponse) return errorResponse;
+
+    const { orderId } = await params;
+    const ordersCol = await getCollection("orders");
+    const order = await ordersCol.findOne({ id: orderId });
+
+    if (!order) {
+      return NextResponse.json({ success: false, error: "Order not found", code: "NOT_FOUND" }, { status: 404 });
+    }
+
+    const shopsCol = user.role === ROLES.SHOP_OWNER
+      ? await getCollection("shops")
+      : null;
+    const shop = shopsCol
+      ? await shopsCol.findOne({
+          $or: [{ ownerId: user.id }, { ownerUserId: user.id }],
+          id: order.shopId,
+        })
+      : null;
+    const isAvailableToRider =
+      user.role === ROLES.RIDER &amp;&amp;
+      (order.riderId === null || order.riderId === undefined) &amp;&amp;
+      (order.riderUserId === null || order.riderUserId === undefined) &amp;&amp;
+      [ORDER_STATUS.CONFIRMED, ORDER_STATUS.AWAITING_RIDER].includes(order.status);
+
+    if (!isOrderParticipant(order, user, shop) &amp;&amp; !isAvailableToRider) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Order not found",
+          code: "NOT_FOUND",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: serializeOrderForUser(order, user),
+    });
+  } catch (err) {
+    console.error("[Order Detail API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Function PATCH.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise&lt;*>} Resolves with the operation result.
+ */
+export async function PATCH(request, { params }) {
+  try {
+    const { user, errorResponse } = await requireSession(request);
+    if (errorResponse) return errorResponse;
+
+    const { orderId } = await params;
+    const body = await request.json();
+    const ordersCol = await getCollection("orders");
+
+    const order = await ordersCol.findOne({ id: orderId });
+    if (!order) {
+      return NextResponse.json({ success: false, error: "Order not found", code: "NOT_FOUND" }, { status: 404 });
+    }
+    const shopsCol = user.role === ROLES.SHOP_OWNER
+      ? await getCollection("shops")
+      : null;
+    const shop = shopsCol
+      ? await shopsCol.findOne({
+          $or: [{ ownerId: user.id }, { ownerUserId: user.id }],
+          id: order.shopId,
+        })
+      : null;
+    if (!isOrderParticipant(order, user, shop)) {
+      return NextResponse.json(
+        { success: false, error: "Order not found", code: "NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    const now = new Date().toISOString();
+    const updates = {};
+    const timestamps = { ...(order.statusTimestamps || {}) };
+
+    // Cancellation request
+    if (body.status === ORDER_STATUS.CANCELLED || body.cancelReason) {
+      // Cancellation policy: customer can cancel before pickup, or admin/shop owner can cancel
+      const isCustomer = isStudentOrderOwner(order, user);
+      const isAdmin = user.role === ROLES.ADMIN;
+      const isShopManager = isShopOwner(shop, user);
+
+      if (!isCustomer &amp;&amp; !isAdmin &amp;&amp; !isShopManager) {
+        return NextResponse.json(
+          { success: false, error: "Order not found", code: "NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+
+      if ([ORDER_STATUS.PICKED_UP, ORDER_STATUS.DELIVERED].includes(order.status)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Order cannot be cancelled after pickup. Please open a dispute with administration.",
+            code: "CANCEL_POLICY_VIOLATION",
+          },
+          { status: 409 }
+        );
+      }
+
+      updates.status = ORDER_STATUS.CANCELLED;
+      updates.cancellationReason = body.cancelReason || body.cancellationReason || "Cancelled by user";
+      updates.escrowStatus = "refunded";
+      timestamps.cancelledAt = now;
+      updates.statusTimestamps = timestamps;
+    } else if (body.status) {
+      // General status update (e.g. shop owner moving to confirmed/preparing)
+      const isAdmin = user.role === ROLES.ADMIN;
+      const shopManager = isShopOwner(shop, user);
+
+      if (!isAdmin &amp;&amp; !shopManager) {
+        return NextResponse.json(
+          { success: false, error: "Order not found", code: "NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+
+      updates.status = body.status;
+      if (body.status === ORDER_STATUS.CONFIRMED) timestamps.confirmedAt = now;
+      if (body.status === ORDER_STATUS.AWAITING_RIDER) timestamps.awaitingRiderAt = now;
+      updates.statusTimestamps = timestamps;
+    }
+
+    // Customer rating submission
+    if (body.rating || body.ratingGiven) {
+      if (!isStudentOrderOwner(order, user) &amp;&amp; user.role !== ROLES.ADMIN) {
+        return NextResponse.json(
+          { success: false, error: "Order not found", code: "NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+      updates.ratingGiven = {
+        ...(body.rating || body.ratingGiven),
+        ratedAt: now,
+      };
+    }
+
+    await ordersCol.updateOne({ id: orderId }, { $set: updates });
+    const updated = await ordersCol.findOne({ id: orderId });
+
+    return NextResponse.json({
+      success: true,
+      data: serializeOrderForUser(updated, user),
+    });
+  } catch (err) {
+    console.error("[Order Update API Error]:", err.name || "Error");
+    return NextResponse.json(
+      { success: false, error: "Internal server error", code: "INTERNAL_ERROR" },
+      { status: 500 }
+    );
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

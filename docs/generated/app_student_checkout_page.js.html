@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/student/checkout/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/student/checkout/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useEffect, useRef, useState, Suspense } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCart } from "@/context/cart-context";
+import { useAuth } from "@/context/auth-context";
+import { orderService } from "@/services/order-service";
+import { CAMPUS_LOCATIONS } from "@/lib/constants";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatCurrency } from "@/lib/utils";
+import {
+  MapPin,
+  CreditCard,
+  ShieldCheck,
+  Building,
+  ArrowRight,
+  Bike,
+} from "lucide-react";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
+
+/**
+ * Function CheckoutContent.
+ * @returns {*} The operation result.
+ */
+function CheckoutContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const noteParam = searchParams.get("note") || "";
+
+  const { items, shop, subtotal, deliveryFee, platformFee, total, clearCart } = useCart();
+  const { currentUser } = useAuth();
+
+  const [deliveryHall, setDeliveryHall] = useState(CAMPUS_LOCATIONS[0]);
+  const [roomNumber, setRoomNumber] = useState("");
+  const [deliveryNote, setDeliveryNote] = useState(noteParam);
+  const [isPlacing, setIsPlacing] = useState(false);
+  const orderAttemptRef = useRef(null);
+
+  useEffect(() => {
+    if (currentUser?.hall &amp;&amp; CAMPUS_LOCATIONS.includes(currentUser.hall)) {
+      setDeliveryHall(currentUser.hall);
+    }
+    if (currentUser?.roomNumber) setRoomNumber(currentUser.roomNumber);
+  }, [currentUser?.id, currentUser?.hall, currentUser?.roomNumber]);
+
+  if (items.length === 0) {
+    return (
+      &lt;div className="py-20 text-center space-y-4">
+        &lt;h2 className="text-xl font-bold">Your cart is empty&lt;/h2>
+        &lt;Link href="/student/home">
+          &lt;Button variant="primary">Browse Campus Food&lt;/Button>
+        &lt;/Link>
+      &lt;/div>
+    );
+  }
+
+  /**
+   * Arrow function handleInitiateOrder.
+   * @param {*} e - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const handleInitiateOrder = (e) => {
+    e.preventDefault();
+    executeOrderCreation();
+  };
+
+  /**
+   * Arrow function executeOrderCreation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const executeOrderCreation = async () => {
+    setIsPlacing(true);
+    const orderPayload = {
+      shopId: shop?.id,
+      deliveryAddress: `${deliveryHall}, ${roomNumber}`,
+      deliveryNote,
+      items: items.map((i) => ({
+        menuItemId: i.item.id,
+        name: i.item.name,
+        quantity: i.quantity,
+        priceAtOrder: i.item.priceBDT,
+      })),
+      subtotal,
+      deliveryFee,
+      total,
+      paymentMethod: "bKash",
+    };
+
+    const requestFingerprint = JSON.stringify({
+      shopId: orderPayload.shopId,
+      items: orderPayload.items.map((item) => ({
+        id: item.menuItemId,
+        quantity: item.quantity,
+      })),
+      deliveryLocation: orderPayload.deliveryAddress.trim(),
+      deliveryNotes: orderPayload.deliveryNote.trim(),
+      paymentMethod: orderPayload.paymentMethod,
+    });
+    if (orderAttemptRef.current?.fingerprint !== requestFingerprint) {
+      const idempotencyKey = window.crypto?.randomUUID?.();
+      if (!idempotencyKey) {
+        toast.error("Secure order submission is unavailable in this browser.");
+        setIsPlacing(false);
+        return;
+      }
+      orderAttemptRef.current = { fingerprint: requestFingerprint, idempotencyKey };
+    }
+
+    try {
+      const res = await orderService.createOrder(
+        orderPayload,
+        orderAttemptRef.current.idempotencyKey
+      );
+      if (res.success) {
+        orderAttemptRef.current = null;
+        if (res.meta?.notificationWarning) toast.warning(res.meta.notificationWarning);
+        // Trigger celebratory confetti
+        try {
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.6 },
+          });
+        } catch {
+          // ignore
+        }
+
+        toast.success(`Order #${res.data.id} placed successfully!`);
+        clearCart();
+        router.push(`/student/orders/${res.data.id}`);
+      } else {
+        toast.error(res.error?.message || "Failed to create order");
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsPlacing(false);
+    }
+  };
+
+  return (
+    &lt;div className="max-w-4xl mx-auto space-y-8 pb-16">
+      &lt;div>
+        &lt;h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          Confirm Delivery &amp;amp; Checkout
+        &lt;/h1>
+        &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          Review your dormitory address and select your payment method
+        &lt;/p>
+      &lt;/div>
+
+      &lt;div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Form: Delivery Address &amp; Payment */}
+        &lt;form onSubmit={handleInitiateOrder} className="lg:col-span-7 space-y-6">
+          {/* Dorm Delivery Details */}
+          &lt;Card>
+            &lt;CardContent className="p-6 space-y-4">
+              &lt;div className="flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                &lt;MapPin className="h-4 w-4 text-emerald-600" />
+                &lt;h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  Dormitory Destination
+                &lt;/h3>
+              &lt;/div>
+
+              &lt;div className="space-y-1.5 text-left">
+                &lt;label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Select Residential Hall / Landmark
+                &lt;/label>
+                &lt;select
+                  value={deliveryHall}
+                  onChange={(e) => setDeliveryHall(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-600"
+                >
+                  {CAMPUS_LOCATIONS.map((loc) => (
+                    &lt;option key={loc} value={loc}>
+                      {loc}
+                    &lt;/option>
+                  ))}
+                &lt;/select>
+              &lt;/div>
+
+              &lt;div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                &lt;Input
+                  label="Room &amp; Floor Number"
+                  placeholder="e.g. Room 304, 3rd Floor"
+                  icon={Building}
+                  value={roomNumber}
+                  onChange={(e) => setRoomNumber(e.target.value)}
+                  required
+                />
+
+              &lt;/div>
+
+              &lt;Input
+                label="Delivery Instructions"
+                placeholder="e.g. Leave with hall security if attending lecture..."
+                value={deliveryNote}
+                onChange={(e) => setDeliveryNote(e.target.value)}
+              />
+            &lt;/CardContent>
+          &lt;/Card>
+
+          {/* Payments are submitted and verified as two independent obligations. */}
+          &lt;Card>
+            &lt;CardContent className="p-6 space-y-4">
+              &lt;div className="flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                &lt;CreditCard className="h-4 w-4 text-emerald-600" />
+                &lt;h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  bKash payment
+                &lt;/h3>
+              &lt;/div>
+
+              &lt;p className="text-xs text-zinc-600 dark:text-zinc-300">
+                After the order is created, send the food amount to the shop and
+                the delivery plus platform fees to CampusEats. Submit each
+                transaction reference separately. References stay pending until
+                an administrator verifies merchant records. Never enter your
+                bKash PIN or OTP here.
+              &lt;/p>
+            &lt;/CardContent>
+          &lt;/Card>
+
+          &lt;Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isPlacing}
+            className="w-full rounded-2xl py-3.5 text-base font-bold shadow-md"
+          >
+            &lt;span>Confirm &amp;amp; Place Order ({formatCurrency(total)})&lt;/span>
+            &lt;ArrowRight className="h-5 w-5 ml-1" />
+          &lt;/Button>
+        &lt;/form>
+
+        {/* Right Summary */}
+        &lt;div className="lg:col-span-5 space-y-4">
+          &lt;Card>
+            &lt;CardContent className="p-6 space-y-4">
+              &lt;h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                Order Items ({items.length})
+              &lt;/h3>
+
+              &lt;div className="space-y-3 max-h-60 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/60 pr-1">
+                {items.map(({ item, quantity }) => (
+                  &lt;div key={item.id} className="pt-2 flex justify-between items-center text-xs">
+                    &lt;div>
+                      &lt;p className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {quantity}x {item.name}
+                      &lt;/p>
+                      &lt;p className="text-zinc-400">{formatCurrency(item.priceBDT)} each&lt;/p>
+                    &lt;/div>
+                    &lt;span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      {formatCurrency(item.priceBDT * quantity)}
+                    &lt;/span>
+                  &lt;/div>
+                ))}
+              &lt;/div>
+
+              &lt;div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2 text-xs text-zinc-600 dark:text-zinc-300">
+                &lt;div className="flex justify-between">
+                  &lt;span>Subtotal&lt;/span>
+                  &lt;span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(subtotal)}
+                  &lt;/span>
+                &lt;/div>
+                &lt;div className="flex justify-between">
+                  &lt;span className="flex items-center gap-1">
+                    &lt;Bike className="h-3.5 w-3.5 text-emerald-600" />
+                    &lt;span>Hall Delivery Fee&lt;/span>
+                  &lt;/span>
+                  &lt;span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(deliveryFee)}
+                  &lt;/span>
+                &lt;/div>
+                &lt;div className="flex justify-between">
+                  &lt;span>Platform Fee&lt;/span>
+                  &lt;span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {formatCurrency(platformFee)}
+                  &lt;/span>
+                &lt;/div>
+                &lt;div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex justify-between text-base font-extrabold text-zinc-900 dark:text-zinc-50">
+                  &lt;span>Total Amount&lt;/span>
+                  &lt;span className="text-emerald-700 dark:text-emerald-400">
+                    {formatCurrency(total)}
+                  &lt;/span>
+                &lt;/div>
+              &lt;/div>
+
+              &lt;div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 flex items-start gap-2 text-xs text-emerald-800 dark:text-emerald-300">
+                &lt;ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+                &lt;span className="leading-tight">
+                  Prices and fees are recalculated by the server. Order preparation
+                  cannot begin until both payment obligations are verified.
+                &lt;/span>
+              &lt;/div>
+            &lt;/CardContent>
+          &lt;/Card>
+        &lt;/div>
+      &lt;/div>
+
+    &lt;/div>
+  );
+}
+
+/**
+ * Function StudentCheckoutPage.
+ * @returns {*} The operation result.
+ */
+export default function StudentCheckoutPage() {
+  return (
+    &lt;Suspense fallback={&lt;div className="p-8 text-center text-xs">Loading checkout...&lt;/div>}>
+      &lt;CheckoutContent />
+    &lt;/Suspense>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

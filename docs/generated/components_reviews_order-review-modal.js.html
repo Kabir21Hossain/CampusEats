@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: components/reviews/order-review-modal.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: components/reviews/order-review-modal.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import { useEffect, useState } from "react";
+import { MessageSquareText, Sparkles, Star, Store, Utensils, Bike } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+
+const RATING_LABELS = ["", "Needs improvement", "Fair", "Good", "Very good", "Excellent"];
+
+/**
+ * Function StarRating.
+ * @param {*} value - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
+function StarRating({ label, value, onChange }) {
+  const [hovered, setHovered] = useState(0);
+  const activeRating = hovered || value;
+
+  return (
+    &lt;div>
+      &lt;div className="flex items-center gap-1" role="group" aria-label={label}>
+        {[1, 2, 3, 4, 5].map((rating) => (
+          &lt;button
+            key={rating}
+            type="button"
+            aria-label={`${label}: ${rating} star${rating === 1 ? "" : "s"}`}
+            aria-pressed={value === rating}
+            onMouseEnter={() => setHovered(rating)}
+            onMouseLeave={() => setHovered(0)}
+            onFocus={() => setHovered(rating)}
+            onBlur={() => setHovered(0)}
+            onClick={() => onChange(rating)}
+            className="rounded-lg p-1.5 text-amber-400 transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+          >
+            &lt;Star className={`h-7 w-7 ${rating &lt;= activeRating ? "fill-current" : ""}`} />
+          &lt;/button>
+        ))}
+        &lt;span className="ml-2 min-w-28 text-xs font-medium text-zinc-500 dark:text-zinc-400" aria-live="polite">
+          {RATING_LABELS[activeRating] || "Tap to rate"}
+        &lt;/span>
+      &lt;/div>
+    &lt;/div>
+  );
+}
+
+/**
+ * Function CommentField.
+ * @param {*} label - Input value used by the operation.
+ * @param {*} value - Input value used by the operation.
+ * @param {*} onChange - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
+function CommentField({ id, label, value, onChange, placeholder }) {
+  return (
+    &lt;div className="mt-3">
+      &lt;label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+        {label} &lt;span className="font-normal text-zinc-400">(optional)&lt;/span>
+      &lt;/label>
+      &lt;textarea
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        maxLength={1000}
+        rows={2}
+        placeholder={placeholder}
+        className="w-full resize-y rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+      />
+      &lt;div className="mt-1 text-right text-[10px] text-zinc-400">{value.length}/1000&lt;/div>
+    &lt;/div>
+  );
+}
+
+/**
+ * Function ReviewSection.
+ * @param {*} title - Input value used by the operation.
+ * @param {*} detail - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
+function ReviewSection({ icon: Icon, title, detail, children }) {
+  return (
+    &lt;section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/70">
+      &lt;div className="mb-3 flex items-start gap-3">
+        &lt;div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+          &lt;Icon className="h-4 w-4" />
+        &lt;/div>
+        &lt;div>
+          &lt;h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{title}&lt;/h4>
+          &lt;p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{detail}&lt;/p>
+        &lt;/div>
+      &lt;/div>
+      {children}
+    &lt;/section>
+  );
+}
+
+/**
+ * Function OrderReviewModal.
+ * @param {*} onClose - Input value used by the operation.
+ * @param {*} order - Input value used by the operation.
+ * @param {*} isSubmitting - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
+export function OrderReviewModal({ isOpen, onClose, order, isSubmitting, onSubmit }) {
+  const [shopRating, setShopRating] = useState(0);
+  const [shopComment, setShopComment] = useState("");
+  const [foodReviews, setFoodReviews] = useState({});
+  const [riderRating, setRiderRating] = useState(0);
+  const [riderComment, setRiderComment] = useState("");
+  const items = [...new Map((order?.items || []).map((item) => [item.id, item])).values()];
+  const hasRider = Boolean(order?.riderId || order?.riderUserId);
+  const hasRating = shopRating > 0 ||
+    Object.values(foodReviews).some((review) => review.rating > 0) ||
+    riderRating > 0;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setShopRating(0);
+    setShopComment("");
+    setRiderRating(0);
+    setRiderComment("");
+    setFoodReviews(Object.fromEntries(items.map((item) => [
+      item.id,
+      { rating: 0, comment: "" },
+    ])));
+  }, [isOpen, order?.id]);
+
+  /**
+   * Arrow function updateFoodReview.
+   * @param {*} itemId - Input value used by the operation.
+   * @param {*} key - Input value used by the operation.
+   * @param {*} value - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const updateFoodReview = (itemId, key, value) => {
+    setFoodReviews((current) => ({
+      ...current,
+      [itemId]: { ...current[itemId], [key]: value },
+    }));
+  };
+
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} event - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!hasRating) return;
+
+    onSubmit({
+      ...(shopRating > 0
+        ? { shopReview: { rating: shopRating, comment: shopComment } }
+        : {}),
+      foodReviews: items
+        .filter((item) => foodReviews[item.id]?.rating > 0)
+        .map((item) => ({
+          menuItemId: item.id,
+          rating: foodReviews[item.id].rating,
+          comment: foodReviews[item.id].comment,
+        })),
+      ...(riderRating > 0
+        ? { riderReview: { rating: riderRating, comment: riderComment } }
+        : {}),
+    });
+  };
+
+  return (
+    &lt;Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="How was your order?"
+      description="Your feedback helps the campus community choose well."
+      maxWidth="max-w-2xl"
+      className="max-h-[90vh] overflow-hidden"
+    >
+      &lt;form onSubmit={handleSubmit} className="flex max-h-[calc(90vh-7rem)] flex-col">
+        &lt;div className="-mx-6 -mt-6 overflow-y-auto px-6 pb-5 pt-1">
+          &lt;div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 p-4 text-white">
+            &lt;div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+              &lt;Sparkles className="h-5 w-5" />
+            &lt;/div>
+            &lt;div>
+              &lt;p className="text-sm font-bold">A little feedback goes a long way&lt;/p>
+              &lt;p className="mt-0.5 text-xs text-emerald-50/90">
+                Rate any part of your experience. Comments are optional.
+              &lt;/p>
+            &lt;/div>
+          &lt;/div>
+
+          &lt;div className="space-y-3">
+            &lt;ReviewSection
+              icon={Store}
+              title={order?.shopName || "Campus shop"}
+              detail="Rate the shop and your overall experience."
+            >
+              &lt;StarRating label="Shop rating" value={shopRating} onChange={setShopRating} />
+              &lt;CommentField
+                id="shop-review-comment"
+                label="Your shop comment"
+                value={shopComment}
+                onChange={setShopComment}
+                placeholder="What did you enjoy about the shop?"
+              />
+            &lt;/ReviewSection>
+
+            {items.map((item, index) => {
+              const review = foodReviews[item.id] || { rating: 0, comment: "" };
+              return (
+                &lt;ReviewSection
+                  key={`${item.id}-${index}`}
+                  icon={Utensils}
+                  title={item.name}
+                  detail="How was this dish?"
+                >
+                  &lt;StarRating
+                    label={`${item.name} rating`}
+                    value={review.rating}
+                    onChange={(rating) => updateFoodReview(item.id, "rating", rating)}
+                  />
+                  &lt;CommentField
+                    id={`food-review-comment-${index}`}
+                    label={`Your comment about ${item.name}`}
+                    value={review.comment}
+                    onChange={(comment) => updateFoodReview(item.id, "comment", comment)}
+                    placeholder="Share a note about the taste or quality..."
+                  />
+                &lt;/ReviewSection>
+              );
+            })}
+
+            {hasRider &amp;&amp; (
+              &lt;ReviewSection
+                icon={Bike}
+                title={order?.riderName || "Your delivery rider"}
+                detail="Rate your delivery experience."
+              >
+                &lt;StarRating label="Rider rating" value={riderRating} onChange={setRiderRating} />
+                &lt;CommentField
+                  id="rider-review-comment"
+                  label="Your rider comment"
+                  value={riderComment}
+                  onChange={setRiderComment}
+                  placeholder="How was the delivery?"
+                />
+              &lt;/ReviewSection>
+            )}
+          &lt;/div>
+        &lt;/div>
+
+        &lt;div className="-mx-6 flex items-center justify-between gap-3 border-t border-zinc-100 bg-white px-6 pt-4 dark:border-zinc-800 dark:bg-zinc-900">
+          &lt;p className="hidden items-center gap-1.5 text-xs text-zinc-400 sm:flex">
+            &lt;MessageSquareText className="h-3.5 w-3.5" />
+            You can submit feedback once per order.
+          &lt;/p>
+          &lt;div className="ml-auto flex gap-2">
+            &lt;Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Not now
+            &lt;/Button>
+            &lt;Button type="submit" isLoading={isSubmitting} disabled={!hasRating}>
+              Submit feedback
+            &lt;/Button>
+          &lt;/div>
+        &lt;/div>
+      &lt;/form>
+    &lt;/Modal>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/admin/payments/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/admin/payments/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { adminService } from "@/services/admin-service";
+import { usePolling } from "@/hooks/use-polling";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { toast } from "sonner";
+
+const PAYMENT_STATUSES = [
+  ["pending_verification", "Needs review"],
+  ["not_submitted", "Not submitted"],
+  ["verified", "Verified"],
+  ["rejected", "Rejected"],
+  ["expired", "Expired"],
+  ["refunded", "Refunded"],
+  ["all", "All"],
+];
+
+/**
+ * Function AdminPaymentsPage.
+ * @returns {*} The operation result.
+ */
+export default function AdminPaymentsPage() {
+  const [payments, setPayments] = useState([]);
+  const [status, setStatus] = useState("pending_verification");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionId, setActionId] = useState("");
+  const [rejectionReasons, setRejectionReasons] = useState({});
+
+  const loadPayments = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const response = await adminService.listPayments(
+      status === "all" ? "" : status,
+      { page, limit: 20 }
+    );
+    if (response.success) {
+      setPayments(response.data);
+      setMeta(response.meta);
+      if (page > Math.max(1, response.meta.totalPages || 1)) {
+        setPage(Math.max(1, response.meta.totalPages || 1));
+      }
+      setError("");
+    } else {
+      setError(response.error.message || "Unable to load payment reviews.");
+    }
+    if (showLoading) setLoading(false);
+  }, [page, status]);
+
+  useEffect(() => {
+    loadPayments();
+  }, [loadPayments]);
+
+  usePolling(() => loadPayments(false), 10000);
+
+  /**
+   * Arrow function handleVerify.
+   * @param {*} payment - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleVerify = async (payment) => {
+    setActionId(payment.id);
+    const response = await adminService.verifyPayment(payment.id);
+    setActionId("");
+    if (!response.success) {
+      toast.error(response.error.message || "Unable to verify payment.");
+      return;
+    }
+    toast.success(`Payment for order #${payment.orderId} verified.`);
+    if (response.meta.notificationWarning) toast.warning(response.meta.notificationWarning);
+    await loadPayments(false);
+  };
+
+  /**
+   * Arrow function handleReject.
+   * @param {*} payment - Input value used by the operation.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleReject = async (payment) => {
+    const reason = String(rejectionReasons[payment.id] || "").trim();
+    if (!reason) {
+      toast.error("Enter a reason before rejecting this reference.");
+      return;
+    }
+    setActionId(payment.id);
+    const response = await adminService.rejectPayment(payment.id, reason);
+    setActionId("");
+    if (!response.success) {
+      toast.error(response.error.message || "Unable to reject payment.");
+      return;
+    }
+    setRejectionReasons((current) => ({ ...current, [payment.id]: "" }));
+    toast.success(`Payment for order #${payment.orderId} rejected.`);
+    if (response.meta.notificationWarning) toast.warning(response.meta.notificationWarning);
+    await loadPayments(false);
+  };
+
+  return (
+    &lt;div className="mx-auto max-w-5xl space-y-6 pb-16">
+      &lt;header className="flex flex-wrap items-start justify-between gap-4">
+        &lt;div>
+          &lt;h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+            bKash Payment Review
+          &lt;/h1>
+          &lt;p className="mt-1 max-w-3xl text-sm text-zinc-500 dark:text-zinc-400">
+            Verify each transaction against the merchant account before approving it.
+            Orders become available to riders only after both the shop and platform
+            payments are verified.
+          &lt;/p>
+        &lt;/div>
+        &lt;Button variant="outline" onClick={() => loadPayments()} disabled={loading}>
+          &lt;RefreshCw className="h-4 w-4" />
+          Refresh
+        &lt;/Button>
+      &lt;/header>
+
+      &lt;div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+        A submitted reference is not proof of payment. Never approve it without
+        checking the actual merchant transaction. Approval records the received
+        payment in the pending ledger; it does not send a payout.
+      &lt;/div>
+
+      &lt;div className="flex flex-wrap gap-2" role="group" aria-label="Filter payment status">
+        {PAYMENT_STATUSES.map(([value, label]) => (
+          &lt;Button
+            key={value}
+            size="sm"
+            variant={status === value ? "primary" : "outline"}
+            aria-pressed={status === value}
+            onClick={() => {
+              setPage(1);
+              setStatus(value);
+            }}
+          >
+            {label}
+          &lt;/Button>
+        ))}
+      &lt;/div>
+
+      {error ? (
+        &lt;div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+          {error}
+          &lt;Button variant="outline" size="sm" className="ml-3" onClick={() => loadPayments()}>
+            Retry
+          &lt;/Button>
+        &lt;/div>
+      ) : loading ? (
+        &lt;div className="p-12 text-center text-sm text-zinc-400">Loading payment references...&lt;/div>
+      ) : payments.length === 0 ? (
+        &lt;div className="rounded-2xl border border-dashed border-zinc-200 p-12 text-center text-sm text-zinc-500 dark:border-zinc-800">
+          No payments in this queue. {meta.total > 0 ? `Showing ${meta.total} total.` : ""}
+        &lt;/div>
+      ) : (
+        &lt;div className="space-y-4">
+          {payments.map((payment) => (
+            &lt;Card key={payment.id}>
+              &lt;CardContent className="space-y-4 p-5">
+                &lt;div className="flex flex-wrap items-center justify-between gap-3">
+                  &lt;div>
+                    &lt;h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                      Order #{payment.orderId} · {payment.obligation === "shop" ? "Food payment to shop" : "Delivery and platform fees"}
+                    &lt;/h2>
+                    &lt;p className="mt-1 text-xs text-zinc-500">
+                      Submitted {payment.submittedAt ? formatDate(payment.submittedAt) : "—"}
+                    &lt;/p>
+                  &lt;/div>
+                  &lt;span className="rounded-full border px-3 py-1 text-xs font-semibold">
+                    {payment.status.replaceAll("_", " ")}
+                    {payment.isTest ? " · TEST" : ""}
+                  &lt;/span>
+                &lt;/div>
+
+                &lt;dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  &lt;div>
+                    &lt;dt className="text-xs text-zinc-500">Amount&lt;/dt>
+                    &lt;dd className="font-bold">{formatCurrency((payment.amountPaisa || 0) / 100)}&lt;/dd>
+                  &lt;/div>
+                  &lt;div>
+                    &lt;dt className="text-xs text-zinc-500">Recipient&lt;/dt>
+                    &lt;dd className="font-mono">{payment.recipient || "Not recorded"}&lt;/dd>
+                  &lt;/div>
+                  &lt;div className="sm:col-span-2">
+                    &lt;dt className="text-xs text-zinc-500">Transaction reference&lt;/dt>
+                    &lt;dd className="break-all font-mono font-semibold">
+                      {payment.normalizedReference || "No reference submitted"}
+                    &lt;/dd>
+                  &lt;/div>
+                  {payment.rejectionReason &amp;&amp; (
+                    &lt;div className="sm:col-span-2">
+                      &lt;dt className="text-xs text-zinc-500">Previous rejection reason&lt;/dt>
+                      &lt;dd>{payment.rejectionReason}&lt;/dd>
+                    &lt;/div>
+                  )}
+                &lt;/dl>
+
+                {payment.status === "pending_verification" &amp;&amp; (
+                  &lt;div className="space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                    &lt;div className="flex flex-wrap justify-end gap-2">
+                      &lt;Button
+                        variant="primary"
+                        size="sm"
+                        isLoading={actionId === payment.id}
+                        disabled={Boolean(actionId)}
+                        onClick={() => handleVerify(payment)}
+                      >
+                        &lt;CheckCircle2 className="h-4 w-4" />
+                        Verified in merchant account
+                      &lt;/Button>
+                    &lt;/div>
+                    &lt;div className="flex flex-col gap-2 sm:flex-row">
+                      &lt;Input
+                        aria-label={`Rejection reason for payment ${payment.id}`}
+                        placeholder="Reason to send to the student"
+                        maxLength={500}
+                        value={rejectionReasons[payment.id] || ""}
+                        onChange={(event) =>
+                          setRejectionReasons((current) => ({
+                            ...current,
+                            [payment.id]: event.target.value,
+                          }))
+                        }
+                      />
+                      &lt;Button
+                        variant="danger"
+                        size="sm"
+                        isLoading={actionId === payment.id}
+                        disabled={Boolean(actionId)}
+                        onClick={() => handleReject(payment)}
+                      >
+                        &lt;XCircle className="h-4 w-4" />
+                        Reject reference
+                      &lt;/Button>
+                    &lt;/div>
+                  &lt;/div>
+                )}
+              &lt;/CardContent>
+            &lt;/Card>
+          ))}
+        &lt;/div>
+      )}
+      {!loading &amp;&amp; !error &amp;&amp; meta.total > 0 &amp;&amp; (
+        &lt;nav className="flex items-center justify-between gap-4" aria-label="Payment review pagination">
+          &lt;p className="text-sm text-zinc-500">
+            Page {page} of {Math.max(1, meta.totalPages)} · {meta.total} payments
+          &lt;/p>
+          &lt;div className="flex gap-2">
+            &lt;Button
+              variant="outline"
+              size="sm"
+              disabled={loading || page &lt;= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            &lt;/Button>
+            &lt;Button
+              variant="outline"
+              size="sm"
+              disabled={loading || page >= meta.totalPages}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            &lt;/Button>
+          &lt;/div>
+        &lt;/nav>
+      )}
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/mock/mock-data.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/mock/mock-data.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * CampusEats Realistic Mock Dataset
+ * Follows MongoDB schema guidelines from architecture.md
+ */
+
+import { ORDER_STATUS, ESCROW_CONFIG, DEFAULT_DELIVERY_FEE } from "@/lib/constants";
+
+/**
+ * Exports INITIAL_SHOPS.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_SHOPS = [
+  {
+    id: "shop-1",
+    name: "Campus Grill &amp; Cafe",
+    slug: "campus-grill-cafe",
+    description: "Juicy artisanal burgers, crispy chicken tenders, and loaded cheese fries near the Central Cafeteria.",
+    cuisine: "Burgers &amp; Fast Food",
+    campusLocation: "Central Cafeteria, North Corner",
+    operatingHours: "10:00 AM - 11:30 PM",
+    isOpen: true,
+    approvalStatus: "approved",
+    rating: 4.8,
+    reviewCount: 342,
+    deliveryTimeMinutes: 25,
+    minimumOrder: 80,
+    bannerUrl: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&amp;fit=crop&amp;w=800&amp;q=80",
+    logoUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    ownerUserId: "owner-1",
+    totalEarningsBDT: 48950,
+  },
+  {
+    id: "shop-2",
+    name: "Khan's Shahi Biryani",
+    slug: "khans-shahi-biryani",
+    description: "Authentic Old Dhaka style Kacchi Biryani and aromatic Morog Polao cooked with pure ghee.",
+    cuisine: "Biryani &amp; Rice",
+    campusLocation: "Near Al Beruni Hall Gate",
+    operatingHours: "11:30 AM - 10:00 PM",
+    isOpen: true,
+    approvalStatus: "approved",
+    rating: 4.9,
+    reviewCount: 512,
+    deliveryTimeMinutes: 30,
+    minimumOrder: 150,
+    bannerUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&amp;fit=crop&amp;w=800&amp;q=80",
+    logoUrl: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    ownerUserId: "owner-2",
+    totalEarningsBDT: 82300,
+  },
+  {
+    id: "shop-3",
+    name: "Green Leaf Healthy Bowls",
+    slug: "green-leaf-healthy-bowls",
+    description: "Nutritious grain bowls, organic fruit smoothies, and fresh salads tailored for study focus.",
+    cuisine: "Healthy &amp; Bowls",
+    campusLocation: "Science Complex, 1st Floor Atrium",
+    operatingHours: "09:00 AM - 08:30 PM",
+    isOpen: true,
+    approvalStatus: "approved",
+    rating: 4.7,
+    reviewCount: 198,
+    deliveryTimeMinutes: 20,
+    minimumOrder: 100,
+    bannerUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&amp;fit=crop&amp;w=800&amp;q=80",
+    logoUrl: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    ownerUserId: "owner-3",
+    totalEarningsBDT: 31200,
+  },
+  {
+    id: "shop-4",
+    name: "Dorm Bites Express",
+    slug: "dorm-bites-express",
+    description: "Quick night bites: steaming hot Khichuri, egg parathas, noodles, and crispy rolls.",
+    cuisine: "Snacks &amp; Chaat",
+    campusLocation: "Al Beruni Hall Lane",
+    operatingHours: "04:00 PM - 02:00 AM",
+    isOpen: true,
+    approvalStatus: "approved",
+    rating: 4.6,
+    reviewCount: 420,
+    deliveryTimeMinutes: 15,
+    minimumOrder: 50,
+    bannerUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&amp;fit=crop&amp;w=800&amp;q=80",
+    logoUrl: "https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    ownerUserId: "owner-4",
+    totalEarningsBDT: 56400,
+  },
+  {
+    id: "shop-5",
+    name: "Tea &amp; Tiffin Corner",
+    slug: "tea-tiffin-corner",
+    description: "Special Masala Karak Chai, Singara, Samucha, and afternoon snack platters.",
+    cuisine: "Drinks &amp; Juices",
+    campusLocation: "Central Shaheed Minar Walk",
+    operatingHours: "08:00 AM - 09:00 PM",
+    isOpen: true,
+    approvalStatus: "approved",
+    rating: 4.8,
+    reviewCount: 680,
+    deliveryTimeMinutes: 15,
+    minimumOrder: 40,
+    bannerUrl: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&amp;fit=crop&amp;w=800&amp;q=80",
+    logoUrl: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    ownerUserId: "owner-5",
+    totalEarningsBDT: 24900,
+  },
+  {
+    id: "shop-6",
+    name: "Baker's Street Pastries",
+    slug: "bakers-street-pastries",
+    description: "Warm fudgy brownies, savory patties, donuts, and freshly roasted drip coffee.",
+    cuisine: "Bakery &amp; Sweets",
+    campusLocation: "Central Library Pavilion",
+    operatingHours: "09:30 AM - 08:00 PM",
+    isOpen: true,
+    approvalStatus: "approved",
+    rating: 4.7,
+    reviewCount: 165,
+    deliveryTimeMinutes: 20,
+    minimumOrder: 70,
+    bannerUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&amp;fit=crop&amp;w=800&amp;q=80",
+    logoUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    ownerUserId: "owner-6",
+    totalEarningsBDT: 19800,
+  },
+];
+
+/**
+ * Exports INITIAL_MENU_ITEMS.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_MENU_ITEMS = [
+  // Shop 1: Campus Grill &amp; Cafe
+  {
+    id: "item-101",
+    shopId: "shop-1",
+    name: "Classic Smash Cheese Burger",
+    description: "Double beef patties, melted cheddar, crisp lettuce, caramelized onions, and signature burger sauce.",
+    category: "Burgers &amp; Fast Food",
+    priceBDT: 220,
+    photoUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 15,
+    dietary: ["Halal"],
+  },
+  {
+    id: "item-102",
+    shopId: "shop-1",
+    name: "Crispy Peri Peri Chicken Wrap",
+    description: "Golden fried chicken breast, spicy peri-peri garlic mayo, shredded cabbage wrapped in toasted tortilla.",
+    category: "Burgers &amp; Fast Food",
+    priceBDT: 180,
+    photoUrl: "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 12,
+    dietary: ["Halal"],
+  },
+  {
+    id: "item-103",
+    shopId: "shop-1",
+    name: "Loaded Cheesy Fries",
+    description: "Seasoned crispy potato fries drizzled with warm cheddar sauce and jalapeno flakes.",
+    category: "Snacks &amp; Chaat",
+    priceBDT: 120,
+    photoUrl: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 10,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-104",
+    shopId: "shop-1",
+    name: "Chilled Mint Lemonade",
+    description: "Freshly squeezed lemon with crushed garden mint and rock salt.",
+    category: "Drinks &amp; Juices",
+    priceBDT: 60,
+    photoUrl: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 5,
+    dietary: ["Vegetarian"],
+  },
+
+  // Shop 2: Khan's Shahi Biryani
+  {
+    id: "item-201",
+    shopId: "shop-2",
+    name: "Special Mutton Kacchi Biryani",
+    description: "Tender marinated mutton cubes slow-cooked with fragrant Chinigura rice, saffron, and roasted potato.",
+    category: "Biryani &amp; Rice",
+    priceBDT: 290,
+    photoUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 20,
+    dietary: ["Halal"],
+  },
+  {
+    id: "item-202",
+    shopId: "shop-2",
+    name: "Shahi Morog Polao",
+    description: "Quarter chicken roast cooked in rich almond paste gravy served over fragrant polao rice and boiled egg.",
+    category: "Biryani &amp; Rice",
+    priceBDT: 240,
+    photoUrl: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 15,
+    dietary: ["Halal"],
+  },
+  {
+    id: "item-203",
+    shopId: "shop-2",
+    name: "Borhani (Traditional Spiced Yogurt)",
+    description: "Thick savory yogurt drink flavored with mint, coriander, mustard seed, and black salt.",
+    category: "Drinks &amp; Juices",
+    priceBDT: 50,
+    photoUrl: "https://images.unsplash.com/photo-1571006682855-680c2f88cf50?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 3,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-204",
+    shopId: "shop-2",
+    name: "Jali Kabab (2 Pcs)",
+    description: "Crispy lace-crusted minced beef kabab with fresh mint dip.",
+    category: "Snacks &amp; Chaat",
+    priceBDT: 80,
+    photoUrl: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 8,
+    dietary: ["Halal"],
+  },
+
+  // Shop 3: Green Leaf Healthy Bowls
+  {
+    id: "item-301",
+    shopId: "shop-3",
+    name: "Teriyaki Grilled Chicken Rice Bowl",
+    description: "Brown rice, grilled chicken strips, steamed broccoli, edamame, sesame ginger glaze.",
+    category: "Healthy &amp; Bowls",
+    priceBDT: 230,
+    photoUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 15,
+    dietary: ["Halal", "High Protein"],
+  },
+  {
+    id: "item-302",
+    shopId: "shop-3",
+    name: "Mediterranean Chickpea &amp; Feta Bowl",
+    description: "Crisp cucumbers, cherry tomatoes, spiced chickpeas, kalamata olives, crumbled feta, and herb vinaigrette.",
+    category: "Healthy &amp; Bowls",
+    priceBDT: 190,
+    photoUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 10,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-303",
+    shopId: "shop-3",
+    name: "Mango Protein Power Smoothie",
+    description: "Ripe mango pulp blended with Greek yogurt, chia seeds, and honey.",
+    category: "Drinks &amp; Juices",
+    priceBDT: 110,
+    photoUrl: "https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 5,
+    dietary: ["Vegetarian"],
+  },
+
+  // Shop 4: Dorm Bites Express
+  {
+    id: "item-401",
+    shopId: "shop-4",
+    name: "Midnight Dim Khichuri Feast",
+    description: "Aromatic lentil and rice khichuri served with double fried egg, spicy eggplant fry, and achar.",
+    category: "Biryani &amp; Rice",
+    priceBDT: 110,
+    photoUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 12,
+    dietary: ["Halal"],
+  },
+  {
+    id: "item-402",
+    shopId: "shop-4",
+    name: "Egg Mughlai Paratha",
+    description: "Flaky pan-fried paratha stuffed with spicy beaten eggs, chopped green chillies, and onions.",
+    category: "Snacks &amp; Chaat",
+    priceBDT: 80,
+    photoUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 10,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-403",
+    shopId: "shop-4",
+    name: "Spicy Maggi with Chicken &amp; Veggies",
+    description: "Double Maggi noodles tossed with sauteed veggies, shredded chicken, and special masala.",
+    category: "Snacks &amp; Chaat",
+    priceBDT: 95,
+    photoUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 8,
+    dietary: ["Halal"],
+  },
+
+  // Shop 5: Tea &amp; Tiffin Corner
+  {
+    id: "item-501",
+    shopId: "shop-5",
+    name: "Karak Malai Cha (Special Cup)",
+    description: "Slow-brewed strong Assam tea with thick condensed milk cream and cardamoms.",
+    category: "Drinks &amp; Juices",
+    priceBDT: 30,
+    photoUrl: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 5,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-502",
+    shopId: "shop-5",
+    name: "Hot Vegetable Singara (3 Pcs)",
+    description: "Crispy pyramid pastries stuffed with spiced potatoes, cauliflower, and roasted peanuts.",
+    category: "Snacks &amp; Chaat",
+    priceBDT: 30,
+    photoUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 5,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-503",
+    shopId: "shop-5",
+    name: "Chicken Samucha (3 Pcs)",
+    description: "Crunchy triangle pastries packed with minced chicken and coriander.",
+    category: "Snacks &amp; Chaat",
+    priceBDT: 45,
+    photoUrl: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 5,
+    dietary: ["Halal"],
+  },
+
+  // Shop 6: Baker's Street Pastries
+  {
+    id: "item-601",
+    shopId: "shop-6",
+    name: "Fudge Chocolate Brownie",
+    description: "Warm Belgian dark chocolate brownie with melted chocolate chips.",
+    category: "Bakery &amp; Sweets",
+    priceBDT: 90,
+    photoUrl: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 3,
+    dietary: ["Vegetarian"],
+  },
+  {
+    id: "item-602",
+    shopId: "shop-6",
+    name: "Chicken Puff Pastry",
+    description: "Buttery golden layers stuffed with creamy shredded chicken filling.",
+    category: "Bakery &amp; Sweets",
+    priceBDT: 65,
+    photoUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&amp;fit=crop&amp;w=600&amp;q=80",
+    isAvailable: true,
+    preparationTimeMinutes: 3,
+    dietary: ["Halal"],
+  },
+];
+
+/**
+ * Exports INITIAL_USERS.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_USERS = [
+  {
+    id: "student-1",
+    name: "Tanvir Ahmed",
+    email: "tanvir.student@example.com",
+    role: "student",
+    studentId: "JU-CSE-2022-045",
+    phone: "+880 1712-345678",
+    dormitoryAddress: "Al Beruni Hall, Room 304, 3rd Floor",
+    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    isSuspended: false,
+    verificationStatus: "verified",
+  },
+  {
+    id: "owner-1",
+    name: "Rafiqul Islam",
+    email: "rafiq.grill@campuseats.com",
+    role: "shop_owner",
+    phone: "+880 1819-876543",
+    shopId: "shop-1",
+    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    isSuspended: false,
+    verificationStatus: "verified",
+  },
+  {
+    id: "rider-1",
+    name: "Sabbir Hossain",
+    email: "sabbir.rider@example.com",
+    role: "rider",
+    studentId: "JU-PHY-2023-112",
+    phone: "+880 1911-223344",
+    vehicleType: "Bicycle",
+    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    isAvailable: true,
+    isSuspended: false,
+    verificationStatus: "verified",
+    totalDeliveries: 128,
+    rating: 4.9,
+    walletBalanceBDT: 1450,
+  },
+  {
+    id: "admin-1",
+    name: "Dr. Farhana Yasmin",
+    email: "admin.farhana@campuseats.ac.bd",
+    role: "admin",
+    phone: "+880 1515-998877",
+    avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&amp;fit=crop&amp;w=200&amp;q=80",
+    isSuspended: false,
+    verificationStatus: "verified",
+  },
+];
+
+/**
+ * Exports INITIAL_ORDERS.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_ORDERS = [
+  {
+    id: "CE-9401",
+    customerUserId: "student-1",
+    customerName: "Tanvir Ahmed",
+    customerPhone: "+880 1712-345678",
+    shopId: "shop-1",
+    shopName: "Campus Grill &amp; Cafe",
+    shopLocation: "Central Cafeteria, North Corner",
+    riderUserId: "rider-1",
+    riderName: "Sabbir Hossain",
+    riderPhone: "+880 1911-223344",
+    status: ORDER_STATUS.PICKED_UP,
+    deliveryAddressSnapshot: "Al Beruni Hall, Room 304, 3rd Floor",
+    deliveryNote: "Please call when you reach the hall gate",
+    items: [
+      {
+        menuItemId: "item-101",
+        name: "Classic Smash Cheese Burger",
+        quantity: 2,
+        priceAtOrder: 220,
+      },
+      {
+        menuItemId: "item-103",
+        name: "Loaded Cheesy Fries",
+        quantity: 1,
+        priceAtOrder: 120,
+      },
+      {
+        menuItemId: "item-104",
+        name: "Chilled Mint Lemonade",
+        quantity: 2,
+        priceAtOrder: 60,
+      },
+    ],
+    subtotal: 680,
+    deliveryFee: DEFAULT_DELIVERY_FEE,
+    total: 710,
+    paymentStatus: "paid",
+    paymentMethod: "bKash Sandbox",
+    escrowStatus: "locked",
+    pickupVerificationCode: "7412",
+    deliveryVerificationCode: "9283",
+    statusTimestamps: {
+      placedAt: new Date(Date.now() - 35 * 60000).toISOString(),
+      confirmedAt: new Date(Date.now() - 25 * 60000).toISOString(),
+      awaitingRiderAt: new Date(Date.now() - 15 * 60000).toISOString(),
+      claimedAt: new Date(Date.now() - 12 * 60000).toISOString(),
+      pickedUpAt: new Date(Date.now() - 5 * 60000).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 35 * 60000).toISOString(),
+  },
+  {
+    id: "CE-9402",
+    customerUserId: "student-1",
+    customerName: "Tanvir Ahmed",
+    customerPhone: "+880 1712-345678",
+    shopId: "shop-2",
+    shopName: "Khan's Shahi Biryani",
+    shopLocation: "Near Al Beruni Hall Gate",
+    riderUserId: null,
+    status: ORDER_STATUS.CONFIRMED,
+    deliveryAddressSnapshot: "Al Beruni Hall, Room 304, 3rd Floor",
+    deliveryNote: "Keep extra green chillies and lemon slices",
+    items: [
+      {
+        menuItemId: "item-201",
+        name: "Special Mutton Kacchi Biryani",
+        quantity: 1,
+        priceAtOrder: 290,
+      },
+      {
+        menuItemId: "item-203",
+        name: "Borhani (Traditional Spiced Yogurt)",
+        quantity: 2,
+        priceAtOrder: 50,
+      },
+    ],
+    subtotal: 390,
+    deliveryFee: DEFAULT_DELIVERY_FEE,
+    total: 420,
+    paymentStatus: "paid",
+    paymentMethod: "bKash Sandbox",
+    escrowStatus: "locked",
+    pickupVerificationCode: "4190",
+    deliveryVerificationCode: "6321",
+    statusTimestamps: {
+      placedAt: new Date(Date.now() - 10 * 60000).toISOString(),
+      confirmedAt: new Date(Date.now() - 7 * 60000).toISOString(),
+    },
+    createdAt: new Date(Date.now() - 10 * 60000).toISOString(),
+  },
+  {
+    id: "CE-9388",
+    customerUserId: "student-1",
+    customerName: "Tanvir Ahmed",
+    customerPhone: "+880 1712-345678",
+    shopId: "shop-4",
+    shopName: "Dorm Bites Express",
+    shopLocation: "Al Beruni Hall Lane",
+    riderUserId: "rider-1",
+    riderName: "Sabbir Hossain",
+    status: ORDER_STATUS.DELIVERED,
+    deliveryAddressSnapshot: "Al Beruni Hall, Room 304",
+    items: [
+      {
+        menuItemId: "item-401",
+        name: "Midnight Dim Khichuri Feast",
+        quantity: 2,
+        priceAtOrder: 110,
+      },
+    ],
+    subtotal: 220,
+    deliveryFee: DEFAULT_DELIVERY_FEE,
+    total: 250,
+    paymentStatus: "paid",
+    paymentMethod: "Cash on Delivery",
+    escrowStatus: "released",
+    statusTimestamps: {
+      placedAt: new Date(Date.now() - 120 * 60000).toISOString(),
+      confirmedAt: new Date(Date.now() - 110 * 60000).toISOString(),
+      claimedAt: new Date(Date.now() - 100 * 60000).toISOString(),
+      pickedUpAt: new Date(Date.now() - 85 * 60000).toISOString(),
+      deliveredAt: new Date(Date.now() - 65 * 60000).toISOString(),
+    },
+    ratingGiven: {
+      shopRating: 5,
+      riderRating: 5,
+      reviewText: "Hot and delicious! Delivered right on time.",
+    },
+    createdAt: new Date(Date.now() - 120 * 60000).toISOString(),
+  },
+];
+
+/**
+ * Exports INITIAL_SHOP_APPLICATIONS.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_SHOP_APPLICATIONS = [
+  {
+    id: "app-101",
+    ownerUserId: "owner-applicant-1",
+    applicantName: "Mahmud Hasan",
+    applicantEmail: "mahmud.chaat@gmail.com",
+    applicantPhone: "+880 1711-987654",
+    shopName: "Campus Chaat &amp; Fuchka Corner",
+    proposedLocation: "Mall Chottor, Arts Faculty",
+    description: "Hygiene-certified authentic crispy fuchka, chotpoti, and dahi fuchka with tamarind water.",
+    documents: [
+      { name: "Trade_License_2024.pdf", size: "1.4 MB" },
+      { name: "Food_Safety_Certificate.pdf", size: "820 KB" },
+      { name: "NID_Copy.pdf", size: "650 KB" },
+    ],
+    submittedAt: new Date(Date.now() - 36 * 3600000).toISOString(),
+    status: "pending",
+  },
+  {
+    id: "app-102",
+    ownerUserId: "owner-applicant-2",
+    applicantName: "Nasreen Sultana",
+    applicantEmail: "nasreen.bakes@yahoo.com",
+    applicantPhone: "+880 1822-445566",
+    shopName: "Sultana's Home Kitchen",
+    proposedLocation: "Near Pritilata Hall Gate",
+    description: "Wholesome home-cooked rice plates, hilsha fish curry, and vegetable bhortas for female students.",
+    documents: [
+      { name: "Catering_Permit.pdf", size: "2.1 MB" },
+      { name: "Campus_Permission_Letter.pdf", size: "430 KB" },
+    ],
+    submittedAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+    status: "pending",
+  },
+];
+
+/**
+ * Exports INITIAL_DISPUTES.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_DISPUTES = [
+  {
+    id: "disp-501",
+    orderId: "CE-9372",
+    openedByUserId: "student-1",
+    openedByName: "Tanvir Ahmed",
+    shopName: "Dorm Bites Express",
+    riderName: "Sabbir Hossain",
+    amountBDT: 190,
+    reason: "Missing Item in Delivery",
+    evidence: "Customer ordered 2x Egg Mughlai Parathas and 1x Spicy Maggi, but the parcel arrived sealed with only 1 paratha.",
+    status: "pending",
+    createdAt: new Date(Date.now() - 14 * 3600000).toISOString(),
+  },
+  {
+    id: "disp-502",
+    orderId: "CE-9340",
+    openedByUserId: "student-2",
+    openedByName: "Sadia Rahman",
+    shopName: "Campus Grill &amp; Cafe",
+    riderName: "Unassigned",
+    amountBDT: 280,
+    reason: "Shop Response Timeout Exceeded",
+    evidence: "Shop was unresponsive for over 15 minutes after order placement. Automatic cancellation refund required.",
+    status: "resolved",
+    resolution: "Full refund of ৳280 credited back to bKash wallet + ৳5 platform courtesy token.",
+    resolvedAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+    createdAt: new Date(Date.now() - 24 * 3600000).toISOString(),
+  },
+];
+
+/**
+ * Exports INITIAL_NOTIFICATIONS.
+ * @type {*} Exported application value.
+*/
+export const INITIAL_NOTIFICATIONS = [
+  {
+    id: "notif-1",
+    userId: "student-1",
+    title: "Order Picked Up! 🚴‍♂️",
+    body: "Rider Sabbir Hossain has collected your order from Campus Grill &amp; Cafe. Expected arrival in 8 mins.",
+    type: "order_update",
+    deepLink: "/student/orders/CE-9401",
+    isRead: false,
+    createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
+  },
+  {
+    id: "notif-2",
+    userId: "student-1",
+    title: "Order Confirmed by Shop 🍳",
+    body: "Khan's Shahi Biryani is now preparing your order #CE-9402.",
+    type: "order_update",
+    deepLink: "/student/orders/CE-9402",
+    isRead: false,
+    createdAt: new Date(Date.now() - 7 * 60000).toISOString(),
+  },
+  {
+    id: "notif-3",
+    userId: "owner-1",
+    title: "New Order Received! 🔔",
+    body: "Order #CE-9401 with 5 items placed. Please confirm preparation.",
+    type: "shop_alert",
+    deepLink: "/shop-owner/orders",
+    isRead: true,
+    createdAt: new Date(Date.now() - 35 * 60000).toISOString(),
+  },
+  {
+    id: "notif-4",
+    userId: "rider-1",
+    title: "Delivery Earnings Added! 💰",
+    body: "৳35 has been credited to your rider escrow wallet for order #CE-9388.",
+    type: "earnings",
+    deepLink: "/rider/earnings",
+    isRead: true,
+    createdAt: new Date(Date.now() - 65 * 60000).toISOString(),
+  },
+];
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

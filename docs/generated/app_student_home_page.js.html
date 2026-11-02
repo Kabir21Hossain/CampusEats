@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/student/home/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/student/home/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { shopService } from "@/services/shop-service";
+import { CUISINE_CATEGORIES } from "@/lib/constants";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ShopCardSkeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatCurrency } from "@/lib/utils";
+import {
+  Search,
+  Star,
+  Clock,
+  MapPin,
+  UtensilsCrossed,
+  Sparkles,
+  ArrowRight,
+  TrendingUp,
+} from "lucide-react";
+
+/**
+ * Function StudentHomePage.
+ * @returns {*} The operation result.
+ */
+export default function StudentHomePage() {
+  const [shops, setShops] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  /**
+   * Arrow function loadShops.
+   * @returns {*} The operation result.
+   */
+  const loadShops = () => {
+    setLoading(true);
+    shopService
+      .listShops({ category: selectedCategory, query: searchQuery })
+      .then((res) => {
+        if (res.success) setShops(res.data);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadShops();
+  }, [selectedCategory]);
+
+  /**
+   * Arrow function handleSearch.
+   * @param {*} e - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
+  const handleSearch = (e) => {
+    e.preventDefault();
+    loadShops();
+  };
+
+  return (
+    &lt;div className="space-y-8 pb-12">
+      {/* Student Welcome Banner */}
+      &lt;div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-emerald-800 to-emerald-950 text-white overflow-hidden shadow-lg">
+        &lt;div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+        &lt;div className="relative z-10 max-w-xl space-y-3">
+          &lt;div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-700/60 border border-emerald-600/60 text-emerald-200 text-xs font-semibold">
+            &lt;Sparkles className="h-3.5 w-3.5" />
+            &lt;span>Campus Dorm Delivery • Flat ৳30 Fee&lt;/span>
+          &lt;/div>
+          &lt;h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            What are you craving today, Tanvir?
+          &lt;/h1>
+          &lt;p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+            Order from verified campus canteens and get food delivered straight to your hall room door.
+          &lt;/p>
+
+          {/* Quick Search */}
+          &lt;form onSubmit={handleSearch} className="pt-2 flex gap-2">
+            &lt;div className="relative flex-1">
+              &lt;Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              &lt;input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search food, biryani, burgers, canteens..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/95 dark:bg-zinc-900/95 text-zinc-900 dark:text-zinc-100 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-xs"
+              />
+            &lt;/div>
+            &lt;Button type="submit" variant="primary" size="md" className="rounded-xl px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-xs">
+              Search
+            &lt;/Button>
+          &lt;/form>
+        &lt;/div>
+      &lt;/div>
+
+      {/* Category Pills Slider */}
+      &lt;div className="space-y-3">
+        &lt;div className="flex items-center justify-between">
+          &lt;h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+            Explore Cuisines
+          &lt;/h3>
+          &lt;Link href="/student/search" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">
+            Advanced Filters →
+          &lt;/Link>
+        &lt;/div>
+
+        &lt;div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+          {CUISINE_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              &lt;button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 select-none shadow-2xs ${
+                  isSelected
+                    ? "bg-emerald-700 text-white shadow-xs scale-[1.02]"
+                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500"
+                }`}
+              >
+                {cat}
+              &lt;/button>
+            );
+          })}
+        &lt;/div>
+      &lt;/div>
+
+      {/* Campus Canteens Grid */}
+      &lt;div className="space-y-4">
+        &lt;div className="flex items-center justify-between">
+          &lt;h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">
+            {selectedCategory === "All" ? "All Approved Campus Shops" : `${selectedCategory} in Campus`}
+          &lt;/h2>
+          &lt;span className="text-xs text-zinc-400 font-medium">
+            {shops.length} outlets available
+          &lt;/span>
+        &lt;/div>
+
+        {loading ? (
+          &lt;div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            &lt;ShopCardSkeleton />
+            &lt;ShopCardSkeleton />
+            &lt;ShopCardSkeleton />
+          &lt;/div>
+        ) : shops.length === 0 ? (
+          &lt;EmptyState
+            icon={UtensilsCrossed}
+            title="No canteens found"
+            description="We couldn't find any campus food shops matching your category or query."
+            actionText="Reset Filters"
+            onAction={() => {
+              setSelectedCategory("All");
+              setSearchQuery("");
+            }}
+          />
+        ) : (
+          &lt;div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {shops.map((shop) => (
+              &lt;Link key={shop.id} href={`/student/shops/${shop.id}`} className="group">
+                &lt;Card hoverEffect className="h-full flex flex-col justify-between">
+                  &lt;div className="relative h-44 w-full overflow-hidden">
+                    &lt;img
+                      src={shop.bannerUrl}
+                      alt={shop.name}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    &lt;div className="absolute top-3 left-3">
+                      &lt;Badge variant="default" size="sm" className="bg-white/95 dark:bg-zinc-900/95 text-zinc-900 dark:text-zinc-100 backdrop-blur-md font-semibold">
+                        {shop.cuisine}
+                      &lt;/Badge>
+                    &lt;/div>
+                    &lt;div className="absolute bottom-3 right-3 bg-black/65 backdrop-blur-md text-white text-[11px] px-2.5 py-0.5 rounded-md flex items-center gap-1 font-medium">
+                      &lt;Clock className="h-3 w-3 text-emerald-400" />
+                      &lt;span>{shop.deliveryTimeMinutes} mins&lt;/span>
+                    &lt;/div>
+                    {!shop.isOpen &amp;&amp; (
+                      &lt;div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
+                        &lt;span className="px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-bold uppercase tracking-wider">
+                          Currently Closed
+                        &lt;/span>
+                      &lt;/div>
+                    )}
+                  &lt;/div>
+
+                  &lt;CardContent className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                    &lt;div>
+                      &lt;div className="flex items-center justify-between">
+                        &lt;h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                          {shop.name}
+                        &lt;/h3>
+                        &lt;div className="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                          &lt;Star className="h-3.5 w-3.5 fill-current" />
+                          &lt;span>{shop.rating}&lt;/span>
+                          &lt;span className="text-[10px] text-zinc-400 font-normal">
+                            ({shop.reviewCount})
+                          &lt;/span>
+                        &lt;/div>
+                      &lt;/div>
+
+                      &lt;p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                        {shop.description}
+                      &lt;/p>
+                    &lt;/div>
+
+                    &lt;div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                      &lt;span className="flex items-center gap-1 truncate max-w-[190px]">
+                        &lt;MapPin className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                        &lt;span className="truncate">{shop.campusLocation}&lt;/span>
+                      &lt;/span>
+                      &lt;span className="font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
+                        Min. {formatCurrency(shop.minimumOrder)}
+                      &lt;/span>
+                    &lt;/div>
+                  &lt;/CardContent>
+                &lt;/Card>
+              &lt;/Link>
+            ))}
+          &lt;/div>
+        )}
+      &lt;/div>
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: types/index.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: types/index.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Shared domain types used by CampusEats services, routes, components, and tests.
+ *
+ * @typedef {'student' | 'shop_owner' | 'rider' | 'admin'} UserRole
+ */
+
+/**
+ * @typedef {'placed' | 'confirmed' | 'awaiting_rider' | 'claimed' | 'in_transit' | 'delivered' | 'cancelled' | 'rejected' | 'disputed'} OrderStatus
+ */
+
+/**
+ * @typedef {'pending' | 'completed' | 'failed' | 'refunded'} PaymentStatus
+ */
+
+/**
+ * @typedef {'lock' | 'release' | 'refund' | 'adjustment'} EscrowEventType
+ */
+
+/**
+ * @typedef {Object} ApiError
+ * @property {string} code - Machine-readable error code.
+ * @property {string} message - Human-readable explanation.
+ * @property {number} [status] - HTTP status associated with the error.
+ */
+
+/**
+ * @template T
+ * @typedef {Object} ApiResponse
+ * @property {boolean} success - Whether the operation succeeded.
+ * @property {T|null} data - Operation payload when successful.
+ * @property {ApiError|null} error - Error envelope when unsuccessful.
+ * @property {Record&lt;string, *>} [meta] - Optional pagination or diagnostic metadata.
+ */
+
+/**
+ * @typedef {Object} UserProfile
+ * @property {string} _id - Database identifier.
+ * @property {string} userId - Better Auth user identifier.
+ * @property {string} displayName - Display name shown in the application.
+ * @property {string} phone - Contact phone number.
+ * @property {string} studentId - Campus student identifier.
+ * @property {UserRole} role - Account role.
+ * @property {string} [profilePhotoUrl] - Optional profile image URL.
+ * @property {string} dormitoryAddress - Delivery address.
+ * @property {'pending' | 'verified' | 'rejected'} verificationStatus - Verification state.
+ * @property {boolean} isSuspended - Whether access is suspended.
+ * @property {Date} createdAt - Creation timestamp.
+ * @property {Date} updatedAt - Last update timestamp.
+ */
+
+/**
+ * @typedef {Object} Shop
+ * @property {string} _id - Database identifier.
+ * @property {string} ownerUserId - Owning user identifier.
+ * @property {string} name - Shop name.
+ * @property {string} slug - URL-friendly shop identifier.
+ * @property {string} description - Shop description.
+ * @property {{type: 'Point', coordinates: [number, number]}} [campusLocation] - Optional geolocation.
+ * @property {Record&lt;string, string>} operatingHours - Operating schedule.
+ * @property {boolean} isOpen - Whether the shop accepts orders.
+ * @property {'pending' | 'approved' | 'rejected'} approvalStatus - Review state.
+ * @property {number} averageRating - Aggregate rating.
+ * @property {string} [bannerUrl] - Optional banner image URL.
+ * @property {Date} createdAt - Creation timestamp.
+ * @property {Date} updatedAt - Last update timestamp.
+ */
+
+/**
+ * @typedef {Object} MenuItem
+ * @property {string} _id - Database identifier.
+ * @property {string} shopId - Owning shop identifier.
+ * @property {string} name - Display name.
+ * @property {string} description - Item description.
+ * @property {string} category - Menu category.
+ * @property {number} price - Price in the application's currency units.
+ * @property {string} [photoUrl] - Optional item image URL.
+ * @property {boolean} isAvailable - Whether the item can be ordered.
+ * @property {number} preparationTimeMinutes - Estimated preparation time.
+ * @property {Date} createdAt - Creation timestamp.
+ * @property {Date} updatedAt - Last update timestamp.
+ */
+
+/**
+ * @typedef {Object} OrderItem
+ * @property {string} menuItemId - Menu item identifier.
+ * @property {string} name - Snapshot name at checkout.
+ * @property {number} quantity - Ordered quantity.
+ * @property {number} priceAtOrder - Snapshot price at checkout.
+ */
+
+/**
+ * @typedef {Object} Order
+ * @property {string} _id - Database identifier.
+ * @property {string} customerUserId - Customer identifier.
+ * @property {string} shopId - Shop identifier.
+ * @property {string|null} riderUserId - Assigned rider identifier.
+ * @property {OrderItem[]} items - Ordered item snapshots.
+ * @property {OrderStatus} status - Current order status.
+ * @property {string} deliveryAddressSnapshot - Delivery address captured at checkout.
+ * @property {string} [deliveryNote] - Optional delivery instructions.
+ * @property {number} subtotal - Item subtotal.
+ * @property {number} deliveryFee - Delivery charge.
+ * @property {number} total - Total charge.
+ * @property {string} currency - Currency code, such as BDT.
+ * @property {PaymentStatus} paymentStatus - Payment state.
+ * @property {'pending' | 'locked' | 'released' | 'refunded'} escrowStatus - Escrow state.
+ * @property {Record&lt;string, Date>} statusTimestamps - Status transition timestamps.
+ * @property {Date} createdAt - Creation timestamp.
+ * @property {Date} updatedAt - Last update timestamp.
+ */
+
+/**
+ * @typedef {Object} EscrowLedgerEntry
+ * @property {string} _id - Database identifier.
+ * @property {string} orderId - Related order identifier.
+ * @property {number} amount - Ledger amount.
+ * @property {string} currency - Currency code.
+ * @property {string} debitAccount - Debited account.
+ * @property {string} creditAccount - Credited account.
+ * @property {EscrowEventType} eventType - Escrow operation.
+ * @property {string} idempotencyKey - Duplicate-prevention key.
+ * @property {Record&lt;string, *>} [metadata] - Additional ledger metadata.
+ * @property {Date} createdAt - Creation timestamp.
+ */
+
+/**
+ * @typedef {Object} QRToken
+ * @property {string} _id - Database identifier.
+ * @property {string} orderId - Related order identifier.
+ * @property {string} userId - Token owner identifier.
+ * @property {'pickup' | 'delivery'} purpose - Handover purpose.
+ * @property {string} tokenHash - Stored token hash.
+ * @property {Date} expiresAt - Expiration timestamp.
+ * @property {Date|null} usedAt - Consumption timestamp.
+ * @property {Date} createdAt - Creation timestamp.
+ */
+
+export {};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app/shop-owner/dashboard/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app/shop-owner/dashboard/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import React, { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { shopService } from "@/services/shop-service";
+import { orderService } from "@/services/order-service";
+import { useAuth } from "@/context/auth-context";
+import {
+  ORDER_STATUS,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+} from "@/lib/constants";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
+import { ArrowRight, Power, ShoppingBag, Store, TrendingUp } from "lucide-react";
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
+
+/**
+ * Function ShopOwnerDashboardPage.
+ * @returns {*} The operation result.
+ */
+export default function ShopOwnerDashboardPage() {
+  const { currentUser } = useAuth();
+  const currentUserId = currentUser?.id;
+  const [shop, setShop] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    if (!currentUserId) return;
+    setLoading(true);
+    const shopResponse = await shopService.getShopByOwner(currentUserId);
+    const ordersResponse = await orderService.listOrders();
+
+    if (!shopResponse.success) {
+      setShop(null);
+      setError(shopResponse.error.message);
+    } else {
+      setShop(shopResponse.data);
+      if (!ordersResponse.success) {
+        setError(ordersResponse.error.message);
+      } else {
+        setOrders(
+          ordersResponse.data.filter((order) => order.shopId === shopResponse.data.id)
+        );
+        setError("");
+      }
+    }
+    setLoading(false);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  /**
+   * Arrow function handleToggleOpenStatus.
+   * @returns {Promise&lt;*>} Resolves with the operation result.
+   */
+  const handleToggleOpenStatus = async () => {
+    const response = await shopService.toggleShopStatus(shop.id, !shop.isOpen);
+    if (response.success) {
+      setShop(response.data);
+    } else {
+      setError(response.error.message);
+    }
+  };
+
+  if (loading) {
+    return &lt;div className="p-12 text-center text-xs text-zinc-400">Loading owner dashboard...&lt;/div>;
+  }
+
+  if (!shop) {
+    return (
+      &lt;div role={error ? "alert" : undefined} className="p-12 text-center text-sm text-zinc-500">
+        {error || "No shop is assigned to this account yet."}
+      &lt;/div>
+    );
+  }
+
+  const activeOrders = orders.filter((order) =>
+    [
+      ORDER_STATUS.PLACED,
+      ORDER_STATUS.CONFIRMED,
+      ORDER_STATUS.PREPARING,
+      ORDER_STATUS.AWAITING_RIDER,
+    ].includes(order.status)
+  );
+  const deliveredOrders = orders.filter(
+    (order) => order.status === ORDER_STATUS.DELIVERED
+  );
+  const completedVolume = deliveredOrders.reduce(
+    (total, order) => total + (order.total || 0),
+    0
+  );
+
+  return (
+    &lt;div className="space-y-8 pb-16">
+      &lt;header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+        &lt;div>
+          &lt;div className="flex items-center gap-2">
+            &lt;h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-50">
+              {shop.name}
+            &lt;/h1>
+            &lt;Badge
+              variant={shop.isOpen ? "default" : "rose"}
+              size="md"
+              className={shop.isOpen ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}
+            >
+              {shop.isOpen ? "Accepting Orders" : "Offline"}
+            &lt;/Badge>
+          &lt;/div>
+          &lt;p className="text-xs text-zinc-500 dark:text-zinc-400">{shop.campusLocation}&lt;/p>
+        &lt;/div>
+
+        &lt;div className="flex items-center gap-3">
+          &lt;Button
+            variant={shop.isOpen ? "outline" : "primary"}
+            size="md"
+            onClick={handleToggleOpenStatus}
+            className="rounded-xl text-xs font-bold"
+          >
+            &lt;Power className="h-4 w-4" />
+            &lt;span>{shop.isOpen ? "Close Canteen" : "Open for Orders"}&lt;/span>
+          &lt;/Button>
+          &lt;Link href="/shop-owner/orders">
+            &lt;Button variant="primary" size="md" className="rounded-xl text-xs font-bold">
+              &lt;span>View Live Orders ({activeOrders.length})&lt;/span>
+              &lt;ArrowRight className="h-4 w-4" />
+            &lt;/Button>
+          &lt;/Link>
+        &lt;/div>
+      &lt;/header>
+
+      {error &amp;&amp; (
+        &lt;div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          Could not refresh all shop data: {error}
+        &lt;/div>
+      )}
+
+      &lt;div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        &lt;Card>
+          &lt;CardContent className="p-5 space-y-2">
+            &lt;div className="flex items-center justify-between text-xs text-zinc-500">
+              &lt;span>Active orders&lt;/span>
+              &lt;ShoppingBag className="h-4 w-4 text-amber-600" />
+            &lt;/div>
+            &lt;div className="text-2xl font-extrabold">{activeOrders.length}&lt;/div>
+          &lt;/CardContent>
+        &lt;/Card>
+        &lt;Card>
+          &lt;CardContent className="p-5 space-y-2">
+            &lt;div className="flex items-center justify-between text-xs text-zinc-500">
+              &lt;span>Completed deliveries&lt;/span>
+              &lt;Store className="h-4 w-4 text-emerald-600" />
+            &lt;/div>
+            &lt;div className="text-2xl font-extrabold">{deliveredOrders.length}&lt;/div>
+          &lt;/CardContent>
+        &lt;/Card>
+        &lt;Card>
+          &lt;CardContent className="p-5 space-y-2">
+            &lt;div className="flex items-center justify-between text-xs text-zinc-500">
+              &lt;span>Completed order volume&lt;/span>
+              &lt;TrendingUp className="h-4 w-4 text-blue-600" />
+            &lt;/div>
+            &lt;div className="text-2xl font-extrabold">{formatCurrency(completedVolume)}&lt;/div>
+          &lt;/CardContent>
+        &lt;/Card>
+        &lt;Card>
+          &lt;CardContent className="p-5 space-y-2">
+            &lt;div className="flex items-center justify-between text-xs text-zinc-500">
+              &lt;span>Shop rating&lt;/span>
+              &lt;span className="text-amber-500">★&lt;/span>
+            &lt;/div>
+            &lt;div className="text-2xl font-extrabold">
+              {shop.rating ? `${shop.rating} / 5` : "Not rated"}
+            &lt;/div>
+            &lt;p className="text-xs text-zinc-500">
+              {shop.reviewCount || 0} reviews
+            &lt;/p>
+          &lt;/CardContent>
+        &lt;/Card>
+      &lt;/div>
+
+      &lt;DashboardAnalytics orders={orders} role="shop_owner" />
+
+      &lt;Card>
+        &lt;CardContent className="p-6 space-y-4">
+          &lt;div className="flex items-center justify-between">
+            &lt;h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Kitchen queue&lt;/h2>
+            &lt;Link href="/shop-owner/orders" className="text-xs font-semibold text-emerald-700 hover:underline">
+              Full queue →
+            &lt;/Link>
+          &lt;/div>
+          {activeOrders.length === 0 ? (
+            &lt;p className="py-8 text-center text-xs text-zinc-400">No active orders.&lt;/p>
+          ) : (
+            &lt;div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {activeOrders.map((order) => (
+                &lt;div key={order.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  &lt;div>
+                    &lt;p className="font-mono text-xs font-bold">#{order.id}&lt;/p>
+                    &lt;p className="text-xs text-zinc-500">
+                      {(order.items || []).map((item) => `${item.quantity}x ${item.name}`).join(", ")}
+                    &lt;/p>
+                  &lt;/div>
+                  &lt;div className="flex items-center gap-3">
+                    &lt;span className={`rounded-full border px-2.5 py-1 text-[10px] ${ORDER_STATUS_COLORS[order.status] || ""}`}>
+                      {ORDER_STATUS_LABELS[order.status] || order.status}
+                    &lt;/span>
+                    &lt;strong className="text-xs text-emerald-700">{formatCurrency(order.total)}&lt;/strong>
+                  &lt;/div>
+                &lt;/div>
+              ))}
+            &lt;/div>
+          )}
+        &lt;/CardContent>
+      &lt;/Card>
+
+      &lt;p className="text-xs text-zinc-500">
+        Wallet balances and payouts are not exposed by the backend yet.
+      &lt;/p>
+    &lt;/div>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

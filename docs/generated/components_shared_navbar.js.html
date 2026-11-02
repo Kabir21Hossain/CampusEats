@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: components/shared/navbar.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: components/shared/navbar.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use client";
+
+import { Suspense, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+import { useCart } from "@/context/cart-context";
+import { ROLES } from "@/lib/constants";
+import { ThemeToggle } from "./theme-toggle";
+import {
+  UtensilsCrossed,
+  ShoppingBag,
+  Bell,
+  Search,
+  Menu,
+  X,
+  Compass,
+  Store,
+  Bike,
+  ShieldCheck,
+  User,
+  LogOut,
+  ChevronRight,
+  ClipboardList,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+/**
+ * Function NavbarContent.
+ * @returns {*} The operation result.
+ */
+function NavbarContent() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const {
+    role,
+    currentUser,
+    logout,
+    notifications,
+    notificationError,
+    unreadNotificationsCount,
+    markNotificationRead,
+    markAllNotificationsRead,
+    refreshNotifications,
+  } = useAuth();
+  const { itemCount } = useCart();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifsOpen, setNotifsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  // Dynamic Navigation according to active role
+  /**
+   * Arrow function getNavLinks.
+   * @returns {*} The operation result.
+   */
+  const getNavLinks = () => {
+    if (role === ROLES.STUDENT) {
+      return [
+        { href: "/student/home", label: "Discovery" },
+        { href: "/student/search", label: "Search &amp; Filter" },
+        { href: "/student/orders", label: "My Orders" },
+        { href: "/student/profile", label: "Profile" },
+      ];
+    }
+
+    if (role === ROLES.SHOP_OWNER) {
+      return [
+        { href: "/shop-owner/dashboard", label: "Dashboard" },
+        { href: "/shop-owner/orders", label: "Live Queue" },
+        { href: "/shop-owner/menu", label: "Menu Items" },
+        { href: "/shop-owner/earnings", label: "Earnings" },
+        { href: "/shop-owner/settings", label: "Settings" },
+      ];
+    }
+    if (role === ROLES.RIDER) {
+      return [
+        { href: "/rider/available-orders", label: "Available Feed" },
+        { href: "/rider/active-delivery", label: "Active Delivery" },
+        { href: "/rider/earnings", label: "My Earnings" },
+        { href: "/rider/profile", label: "Rider Profile" },
+      ];
+    }
+    if (role === ROLES.ADMIN) {
+      return [
+        { href: "/admin/dashboard", label: "Overview" },
+        { href: "/admin/shops", label: "Shop Approvals" },
+        { href: "/admin/users", label: "User Directory" },
+        { href: "/admin/orders", label: "Order Monitor" },
+        { href: "/admin/payments", label: "Payment Review" },
+        { href: "/admin/payouts", label: "Payouts" },
+        { href: "/admin/audit-logs", label: "Audit Log" },
+        { href: "/admin/payment-settings", label: "Payment Settings" },
+        { href: "/admin/disputes", label: "Disputes" },
+      ];
+    }
+    // Visitor / Public
+    return [
+      { href: "/", label: "Browse Shops" },
+      { href: "/signup", label: "Join CampusEats" },
+      { href: "/signin", label: "Sign In" },
+    ];
+  };
+
+  const navLinks = getNavLinks();
+  const dashboardHref = {
+    [ROLES.STUDENT]: "/student/home",
+    [ROLES.SHOP_OWNER]: "/shop-owner/dashboard",
+    [ROLES.RIDER]: "/rider/available-orders",
+    [ROLES.ADMIN]: "/admin/dashboard",
+  }[role];
+  const roleLabel = {
+    [ROLES.STUDENT]: "Student",
+    [ROLES.SHOP_OWNER]: "Shop Owner",
+    [ROLES.RIDER]: "Rider",
+    [ROLES.ADMIN]: "Admin",
+  }[role];
+
+  return (
+    &lt;header className="sticky top-0 z-40 w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/85 dark:bg-zinc-950/85 backdrop-blur-md transition-colors">
+      &lt;div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
+        {/* Brand Logo */}
+        &lt;Link href="/" className="flex items-center gap-2.5 group">
+          &lt;div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-800 to-emerald-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-200">
+            &lt;UtensilsCrossed className="h-5 w-5" />
+          &lt;/div>
+          &lt;div className="flex flex-col">
+            &lt;div className="flex items-center gap-1.5">
+              &lt;span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-zinc-50 font-sans">
+                Campus&lt;span className="text-emerald-700 dark:text-emerald-400">Eats&lt;/span>
+              &lt;/span>
+              &lt;span className="hidden sm:inline text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                DU Campus
+              &lt;/span>
+            &lt;/div>
+            &lt;span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline leading-none">
+              Dormitory Delivery &amp; Food Hub
+            &lt;/span>
+          &lt;/div>
+        &lt;/Link>
+
+        {/* Desktop Nav Links */}
+        &lt;nav className="hidden md:flex items-center gap-1 bg-zinc-100/70 dark:bg-zinc-900/70 px-2 py-1 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              &lt;Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150",
+                  isActive
+                    ? "bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-400 shadow-2xs font-bold"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
+                )}
+              >
+                {link.label}
+              &lt;/Link>
+            );
+          })}
+        &lt;/nav>
+
+        {/* Action Controls */}
+        &lt;div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          {/* Cart Trigger (for students) */}
+          {role === ROLES.STUDENT &amp;&amp; (
+            &lt;Link
+              href="/student/cart"
+              className="relative flex h-9 items-center gap-2 px-3 rounded-xl border border-emerald-200 dark:border-emerald-800/70 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/80 transition-colors shadow-2xs"
+              aria-label="View shopping cart"
+            >
+              &lt;ShoppingBag className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+              &lt;span className="hidden sm:inline text-xs font-bold">{itemCount}&lt;/span>
+              &lt;span className="hidden sm:inline text-xs font-medium">Cart&lt;/span>
+              {itemCount > 0 &amp;&amp; (
+                &lt;span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white shadow-xs">
+                  {itemCount}
+                &lt;/span>
+              )}
+            &lt;/Link>
+          )}
+
+          {/* Notifications Popover */}
+          {currentUser &amp;&amp; &lt;div className="relative">
+            &lt;button
+              type="button"
+              onClick={() => setNotifsOpen(!notifsOpen)}
+              aria-expanded={notifsOpen}
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs"
+              aria-label="Notifications"
+            >
+              &lt;Bell className="h-4 w-4" />
+              {unreadNotificationsCount > 0 &amp;&amp; (
+                &lt;span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-xs">
+                  {unreadNotificationsCount}
+                &lt;/span>
+              )}
+            &lt;/button>
+
+            {/* Notification Menu */}
+            {notifsOpen &amp;&amp; (
+              &lt;div className="fixed left-4 right-4 top-20 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
+                &lt;div className="flex items-center justify-between px-4 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                  &lt;h4 className="font-semibold text-xs text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                    Notifications
+                  &lt;/h4>
+                  &lt;span className="text-[11px] text-zinc-400">
+                    {unreadNotificationsCount} unread
+                  &lt;/span>
+                &lt;/div>
+                {unreadNotificationsCount > 0 &amp;&amp; (
+                  &lt;button
+                    type="button"
+                    onClick={() => markAllNotificationsRead()}
+                    className="w-full px-4 py-2 text-left text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    Mark all as read
+                  &lt;/button>
+                )}
+                {notificationError &amp;&amp; (
+                  &lt;div className="px-4 py-2 text-[11px] text-rose-600 dark:text-rose-400">
+                    &lt;p role="alert">{notificationError}&lt;/p>
+                    &lt;button
+                      type="button"
+                      onClick={refreshNotifications}
+                      className="mt-1 font-semibold underline"
+                    >
+                      Retry
+                    &lt;/button>
+                  &lt;/div>
+                )}
+                &lt;div className="max-h-72 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                  {notifications.length === 0 ? (
+                    &lt;div className="p-4 text-center text-xs text-zinc-400">
+                      No notifications yet
+                    &lt;/div>
+                  ) : (
+                    notifications.map((n) => (
+                      &lt;button
+                        type="button"
+                        key={n.id}
+                        onClick={async () => {
+                          const markedRead = await markNotificationRead(n.id);
+                          if (!markedRead) return;
+                          setNotifsOpen(false);
+                          if (
+                            typeof n.href === "string" &amp;&amp;
+                            n.href.startsWith("/") &amp;&amp;
+                            !n.href.startsWith("//")
+                          ) {
+                            router.push(n.href);
+                          }
+                        }}
+                        className={cn(
+                          "block w-full p-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors text-left",
+                          !n.isRead &amp;&amp; "bg-emerald-50/40 dark:bg-emerald-950/20"
+                        )}
+                      >
+                        &lt;div className="flex items-center justify-between">
+                          &lt;p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                            {n.title}
+                          &lt;/p>
+                          {!n.isRead &amp;&amp; (
+                            &lt;span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                          )}
+                        &lt;/div>
+                        &lt;p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5 line-clamp-2">
+                          {n.body}
+                        &lt;/p>
+                      &lt;/button>
+                    ))
+                  )}
+                &lt;/div>
+              &lt;/div>
+            )}
+          &lt;/div>}
+
+          {/* Theme Toggle */}
+          &lt;div className="hidden sm:block">
+            &lt;ThemeToggle />
+          &lt;/div>
+
+          {/* User Profile / Auth State */}
+          {currentUser ? (
+            &lt;div className="relative hidden sm:block pl-1">
+              &lt;button
+                type="button"
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs"
+                aria-expanded={profileOpen}
+                aria-label="Open account menu"
+              >
+                &lt;img
+                  src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&amp;fit=crop&amp;w=100&amp;q=80"}
+                  alt=""
+                  className="h-6 w-6 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
+                />
+                &lt;span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 hidden lg:inline max-w-[100px] truncate">
+                  {currentUser.name.split(" ")[0]}
+                &lt;/span>
+                &lt;span className="sr-only">{roleLabel} account menu&lt;/span>
+              &lt;/button>
+              {profileOpen &amp;&amp; (
+                &lt;div className="absolute right-0 mt-2 w-52 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 z-50">
+                  &lt;div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                    &lt;p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {currentUser.name}
+                    &lt;/p>
+                    &lt;p className="text-[11px] text-zinc-500">{roleLabel}&lt;/p>
+                  &lt;/div>
+                  {dashboardHref &amp;&amp; (
+                    &lt;Link
+                      href={dashboardHref}
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      Go to dashboard
+                    &lt;/Link>
+                  )}
+                  &lt;button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      logout();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Sign Out
+                  &lt;/button>
+                &lt;/div>
+              )}
+            &lt;/div>
+          ) : (
+            &lt;Link
+              href="/signin"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors shadow-xs"
+            >
+              Sign In
+            &lt;/Link>
+          )}
+
+          {/* Mobile Menu Toggle Button */}
+          &lt;button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+            aria-label="Toggle mobile menu"
+          >
+            {mobileMenuOpen ? (
+              &lt;X className="h-5 w-5" />
+            ) : (
+              &lt;Menu className="h-5 w-5" />
+            )}
+          &lt;/button>
+        &lt;/div>
+      &lt;/div>
+
+      {/* Mobile Drawer */}
+      {mobileMenuOpen &amp;&amp; (
+        &lt;div className="md:hidden border-t border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 px-4 py-4 space-y-2 animate-in slide-in-from-top-4 duration-200">
+          &lt;p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider px-2">
+            Navigation Menu ({role})
+          &lt;/p>
+          &lt;div className="flex flex-col space-y-1">
+            {navLinks.map((link) => (
+              &lt;Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium",
+                  pathname === link.href
+                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                )}
+              >
+                &lt;span>{link.label}&lt;/span>
+                &lt;ChevronRight className="h-4 w-4 opacity-40" />
+              &lt;/Link>
+            ))}
+          &lt;/div>
+
+          &lt;div className="pt-2 border-t border-zinc-100 dark:border-zinc-900 flex justify-between items-center px-2">
+            &lt;span className="text-xs text-zinc-500">
+              Role: &lt;strong className="text-zinc-800 dark:text-zinc-200 uppercase">{role}&lt;/strong>
+            &lt;/span>
+            &lt;div className="flex items-center gap-3">
+              &lt;ThemeToggle />
+              {currentUser &amp;&amp; (
+              &lt;button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-700 font-medium"
+              >
+                &lt;LogOut className="h-3.5 w-3.5" />
+                &lt;span>Sign Out&lt;/span>
+              &lt;/button>
+              )}
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      )}
+    &lt;/header>
+  );
+}
+
+/**
+ * Function Navbar.
+ * @returns {*} The operation result.
+ */
+export function Navbar() {
+  return (
+    &lt;Suspense fallback={&lt;div className="h-16 shrink-0" aria-hidden="true" />}>
+      &lt;NavbarContent />
+    &lt;/Suspense>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#ALLOWED_MIME_TYPES">ALLOWED_MIME_TYPES</a></li><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#AUTH_BASE_URL">AUTH_BASE_URL</a></li><li><a href="global.html#AuthProvider">AuthProvider</a></li><li><a href="global.html#Badge">Badge</a></li><li><a href="global.html#Button">Button</a></li><li><a href="global.html#CAMPUS_LOCATIONS">CAMPUS_LOCATIONS</a></li><li><a href="global.html#CUISINE_CATEGORIES">CUISINE_CATEGORIES</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#CardContent">CardContent</a></li><li><a href="global.html#CardDescription">CardDescription</a></li><li><a href="global.html#CardFooter">CardFooter</a></li><li><a href="global.html#CardHeader">CardHeader</a></li><li><a href="global.html#CardTitle">CardTitle</a></li><li><a href="global.html#CartProvider">CartProvider</a></li><li><a href="global.html#ChartCard">ChartCard</a></li><li><a href="global.html#ChartTooltip">ChartTooltip</a></li><li><a href="global.html#CheckoutContent">CheckoutContent</a></li><li><a href="global.html#CommentField">CommentField</a></li><li><a href="global.html#DEFAULT_DELIVERY_FEE">DEFAULT_DELIVERY_FEE</a></li><li><a href="global.html#DEFAULT_PLATFORM_FEE">DEFAULT_PLATFORM_FEE</a></li><li><a href="global.html#DELETE">DELETE</a></li><li><a href="global.html#DashboardAnalytics">DashboardAnalytics</a></li><li><a href="global.html#DemoRoleBanner">DemoRoleBanner</a></li><li><a href="global.html#DistributionCard">DistributionCard</a></li><li><a href="global.html#ESCROW_CONFIG">ESCROW_CONFIG</a></li><li><a href="global.html#EmptyState">EmptyState</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#GET">GET</a></li><li><a href="global.html#HandoverCodeDisplay">HandoverCodeDisplay</a></li><li><a href="global.html#HandoverCodeForm">HandoverCodeForm</a></li><li><a href="global.html#INITIAL_DISPUTES">INITIAL_DISPUTES</a></li><li><a href="global.html#INITIAL_MENU_ITEMS">INITIAL_MENU_ITEMS</a></li><li><a href="global.html#INITIAL_NOTIFICATIONS">INITIAL_NOTIFICATIONS</a></li><li><a href="global.html#INITIAL_ORDERS">INITIAL_ORDERS</a></li><li><a href="global.html#INITIAL_SHOPS">INITIAL_SHOPS</a></li><li><a href="global.html#INITIAL_SHOP_APPLICATIONS">INITIAL_SHOP_APPLICATIONS</a></li><li><a href="global.html#INITIAL_USERS">INITIAL_USERS</a></li><li><a href="global.html#Input">Input</a></li><li><a href="global.html#Modal">Modal</a></li><li><a href="global.html#Navbar">Navbar</a></li><li><a href="global.html#NavbarContent">NavbarContent</a></li><li><a href="global.html#ORDER_STATUS">ORDER_STATUS</a></li><li><a href="global.html#ORDER_STATUS_COLORS">ORDER_STATUS_COLORS</a></li><li><a href="global.html#ORDER_STATUS_LABELS">ORDER_STATUS_LABELS</a></li><li><a href="global.html#OrderReviewModal">OrderReviewModal</a></li><li><a href="global.html#OrderStatusStepper">OrderStatusStepper</a></li><li><a href="global.html#PATCH">PATCH</a></li><li><a href="global.html#POST">POST</a></li><li><a href="global.html#PersonalBkashSettings">PersonalBkashSettings</a></li><li><a href="global.html#Providers">Providers</a></li><li><a href="global.html#ROLES">ROLES</a></li><li><a href="global.html#ReviewSection">ReviewSection</a></li><li><a href="global.html#RoleLayout">RoleLayout</a></li><li><a href="global.html#RoleLayoutInner">RoleLayoutInner</a></li><li><a href="global.html#RolePageGuard">RolePageGuard</a></li><li><a href="global.html#SENDMAIL_PATH">SENDMAIL_PATH</a></li><li><a href="global.html#SearchContent">SearchContent</a></li><li><a href="global.html#ShopCardSkeleton">ShopCardSkeleton</a></li><li><a href="global.html#ShopDetailContent">ShopDetailContent</a></li><li><a href="global.html#SignupForm">SignupForm</a></li><li><a href="global.html#Skeleton">Skeleton</a></li><li><a href="global.html#StarRating">StarRating</a></li><li><a href="global.html#Tabs">Tabs</a></li><li><a href="global.html#ThemeToggle">ThemeToggle</a></li><li><a href="global.html#VerificationContent">VerificationContent</a></li><li><a href="global.html#adminService">adminService</a></li><li><a href="global.html#apiRequest">apiRequest</a></li><li><a href="global.html#assertOwnership">assertOwnership</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authClient">authClient</a></li><li><a href="global.html#checkMongoConnection">checkMongoConnection</a></li><li><a href="global.html#cn">cn</a></li><li><a href="global.html#config">config</a></li><li><a href="global.html#createConnection">createConnection</a></li><li><a href="global.html#createErrorResponse">createErrorResponse</a></li><li><a href="global.html#createSuccessResponse">createSuccessResponse</a></li><li><a href="global.html#dateKey">dateKey</a></li><li><a href="global.html#emailTemplates">emailTemplates</a></li><li><a href="global.html#escapeHtml">escapeHtml</a></li><li><a href="global.html#formatCurrency">formatCurrency</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#formatTime">formatTime</a></li><li><a href="global.html#getAuth">getAuth</a></li><li><a href="global.html#getCollection">getCollection</a></li><li><a href="global.html#getDashboardAnalytics">getDashboardAnalytics</a></li><li><a href="global.html#getDb">getDb</a></li><li><a href="global.html#getDistribution">getDistribution</a></li><li><a href="global.html#getServerSession">getServerSession</a></li><li><a href="global.html#isActiveAccount">isActiveAccount</a></li><li><a href="global.html#isAssignedRider">isAssignedRider</a></li><li><a href="global.html#isAuthorized">isAuthorized</a></li><li><a href="global.html#isOrderParticipant">isOrderParticipant</a></li><li><a href="global.html#isShopOwner">isShopOwner</a></li><li><a href="global.html#isStudentOrderOwner">isStudentOrderOwner</a></li><li><a href="global.html#listShopMenu">listShopMenu</a></li><li><a href="global.html#menuService">menuService</a></li><li><a href="global.html#metadata">metadata</a></li><li><a href="global.html#normalizeMenuItem">normalizeMenuItem</a></li><li><a href="global.html#normalizeOrder">normalizeOrder</a></li><li><a href="global.html#normalizeShop">normalizeShop</a></li><li><a href="global.html#notificationService">notificationService</a></li><li><a href="global.html#numericValue">numericValue</a></li><li><a href="global.html#orderService">orderService</a></li><li><a href="global.html#profileService">profileService</a></li><li><a href="global.html#proxy">proxy</a></li><li><a href="global.html#publicShop">publicShop</a></li><li><a href="global.html#requireAdminSession">requireAdminSession</a></li><li><a href="global.html#requirePageRole">requirePageRole</a></li><li><a href="global.html#requireRole">requireRole</a></li><li><a href="global.html#requireSession">requireSession</a></li><li><a href="global.html#resolveSendmailExecutable">resolveSendmailExecutable</a></li><li><a href="global.html#responseItem">responseItem</a></li><li><a href="global.html#responseMeta">responseMeta</a></li><li><a href="global.html#riderService">riderService</a></li><li><a href="global.html#sanitizeUser">sanitizeUser</a></li><li><a href="global.html#seedDatabaseIfEmpty">seedDatabaseIfEmpty</a></li><li><a href="global.html#sendEmail">sendEmail</a></li><li><a href="global.html#serializeOrderForUser">serializeOrderForUser</a></li><li><a href="global.html#shopService">shopService</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#useCart">useCart</a></li><li><a href="global.html#usePolling">usePolling</a></li><li><a href="global.html#userIdFilter">userIdFilter</a></li><li><a href="global.html#validateAttachment">validateAttachment</a></li><li><a href="global.html#validateSessionAndRole">validateSessionAndRole</a></li><li><a href="global.html#walletService">walletService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Tue Nov 03 2026 00:13:17 GMT+0600 (Bangladesh Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
