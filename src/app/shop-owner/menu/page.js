@@ -22,6 +22,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function ShopOwnerMenuPage.
+ * @returns {*} The operation result.
+ */
 export default function ShopOwnerMenuPage() {
   const { currentUser } = useAuth();
   const [items, setItems] = useState([]);
@@ -39,6 +43,10 @@ export default function ShopOwnerMenuPage() {
     dietary: ["Halal"],
   });
 
+  /**
+   * Arrow function loadMenu.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const loadMenu = async () => {
     setLoading(true);
     const shopResponse = await shopService.getShopByOwner(currentUser?.id);
@@ -58,6 +66,11 @@ export default function ShopOwnerMenuPage() {
     if (currentUser?.id) loadMenu();
   }, [currentUser?.id]);
 
+  /**
+   * Arrow function handleToggleAvailability.
+   * @param {*} item - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleToggleAvailability = async (item) => {
     const res = await menuService.updateMenuItem(item.id, {
       isAvailable: !item.isAvailable,
@@ -74,6 +87,11 @@ export default function ShopOwnerMenuPage() {
     }
   };
 
+  /**
+   * Arrow function handleDeleteItem.
+   * @param {*} itemId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleDeleteItem = async (itemId) => {
     if (window.confirm("Are you sure you want to delete this menu item?")) {
       const res = await menuService.deleteMenuItem(itemId);
@@ -86,6 +104,11 @@ export default function ShopOwnerMenuPage() {
     }
   };
 
+  /**
+   * Arrow function handleCreateItem.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleCreateItem = async (e) => {
     e.preventDefault();
     if (!newItem.name || !newItem.priceBDT) {

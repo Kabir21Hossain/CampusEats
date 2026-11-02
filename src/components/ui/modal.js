@@ -4,8 +4,22 @@ import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
+/**
+ * Function Modal.
+ * @param {*} onClose - Input value used by the operation.
+ * @param {*} title - Input value used by the operation.
+ * @param {*} description - Input value used by the operation.
+ * @param {*} children - Input value used by the operation.
+ * @param {*} maxWidth - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function Modal({ isOpen, onClose, title, description, children, maxWidth = "max-w-md", className }) {
   useEffect(() => {
+    /**
+     * Arrow function handleKeyDown.
+     * @param {*} e - Input value used by the operation.
+     * @returns {*} The operation result.
+     */
     const handleKeyDown = (e) => {
       if (e.key === "Escape") onClose();
     };

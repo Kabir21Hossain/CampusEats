@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 
+/**
+ * Function publicShop.
+ * @param {*} shop - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function publicShop(shop) {
   const { bkashNumber, paymentDetails, ...safeShop } = shop;
   return safeShop;
 }
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

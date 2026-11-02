@@ -1,6 +1,12 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Function Card.
+ * @param {*} children - Input value used by the operation.
+ * @param {*} hoverEffect - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function Card({ className, children, hoverEffect = false, ...props }) {
   return (
     <div
@@ -17,6 +23,11 @@ export function Card({ className, children, hoverEffect = false, ...props }) {
   );
 }
 
+/**
+ * Function CardHeader.
+ * @param {*} children - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function CardHeader({ className, children, ...props }) {
   return (
     <div
@@ -28,6 +39,11 @@ export function CardHeader({ className, children, ...props }) {
   );
 }
 
+/**
+ * Function CardTitle.
+ * @param {*} children - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function CardTitle({ className, children, ...props }) {
   return (
     <h3
@@ -42,6 +58,11 @@ export function CardTitle({ className, children, ...props }) {
   );
 }
 
+/**
+ * Function CardDescription.
+ * @param {*} children - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function CardDescription({ className, children, ...props }) {
   return (
     <p
@@ -53,6 +74,11 @@ export function CardDescription({ className, children, ...props }) {
   );
 }
 
+/**
+ * Function CardContent.
+ * @param {*} children - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function CardContent({ className, children, ...props }) {
   return (
     <div className={cn("p-5 pt-0", className)} {...props}>
@@ -61,6 +87,11 @@ export function CardContent({ className, children, ...props }) {
   );
 }
 
+/**
+ * Function CardFooter.
+ * @param {*} children - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function CardFooter({ className, children, ...props }) {
   return (
     <div

@@ -6,6 +6,10 @@ import { toast } from "sonner";
 
 const CartContext = createContext(null);
 
+/**
+ * Function CartProvider.
+ * @returns {*} The operation result.
+ */
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [shop, setShop] = useState(null);
@@ -25,6 +29,12 @@ export function CartProvider({ children }) {
     }
   }, []);
 
+  /**
+   * Arrow function saveCart.
+   * @param {*} newItems - Input value used by the operation.
+   * @param {*} newShop - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const saveCart = (newItems, newShop) => {
     setItems(newItems);
     setShop(newShop);
@@ -38,6 +48,12 @@ export function CartProvider({ children }) {
     }
   };
 
+  /**
+   * Arrow function addItem.
+   * @param {*} menuItem - Input value used by the operation.
+   * @param {*} itemShop - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const addItem = (menuItem, itemShop) => {
     // Single shop rule enforcement
     if (shop && shop.id !== itemShop.id && items.length > 0) {
@@ -69,6 +85,12 @@ export function CartProvider({ children }) {
     saveCart(updatedItems, currentShop);
   };
 
+  /**
+   * Arrow function updateQuantity.
+   * @param {*} menuItemId - Input value used by the operation.
+   * @param {*} newQuantity - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const updateQuantity = (menuItemId, newQuantity) => {
     if (newQuantity <= 0) {
       removeItem(menuItemId);
@@ -81,6 +103,11 @@ export function CartProvider({ children }) {
     saveCart(updatedItems, shop);
   };
 
+  /**
+   * Arrow function removeItem.
+   * @param {*} menuItemId - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const removeItem = (menuItemId) => {
     const updatedItems = items.filter((i) => i.item.id !== menuItemId);
     const updatedShop = updatedItems.length === 0 ? null : shop;
@@ -88,6 +115,10 @@ export function CartProvider({ children }) {
     toast.info("Item removed from cart");
   };
 
+  /**
+   * Arrow function clearCart.
+   * @returns {*} The operation result.
+   */
   const clearCart = () => {
     saveCart([], null);
   };
@@ -123,6 +154,10 @@ export function CartProvider({ children }) {
   );
 }
 
+/**
+ * Function useCart.
+ * @returns {*} The operation result.
+ */
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {

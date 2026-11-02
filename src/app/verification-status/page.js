@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ShieldCheck, ArrowRight, FileCheck, HelpCircle } from "lucide-react";
 
+/**
+ * Function VerificationContent.
+ * @returns {*} The operation result.
+ */
 function VerificationContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get("type") || "shop";
@@ -102,6 +106,10 @@ function VerificationContent() {
   );
 }
 
+/**
+ * Function VerificationStatusPage.
+ * @returns {*} The operation result.
+ */
 export default function VerificationStatusPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee]">

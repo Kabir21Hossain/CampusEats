@@ -10,6 +10,11 @@ import {
 } from "@/lib/auth-server";
 import { sendEmail, emailTemplates } from "@/lib/email/mailer";
 
+/**
+ * Function POST.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function POST(request) {
   try {
     const { user, errorResponse } = await requireSession(request);

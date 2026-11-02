@@ -21,12 +21,20 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+/**
+ * Function StudentHomePage.
+ * @returns {*} The operation result.
+ */
 export default function StudentHomePage() {
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
+  /**
+   * Arrow function loadShops.
+   * @returns {*} The operation result.
+   */
   const loadShops = () => {
     setLoading(true);
     shopService
@@ -41,6 +49,11 @@ export default function StudentHomePage() {
     loadShops();
   }, [selectedCategory]);
 
+  /**
+   * Arrow function handleSearch.
+   * @param {*} e - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const handleSearch = (e) => {
     e.preventDefault();
     loadShops();

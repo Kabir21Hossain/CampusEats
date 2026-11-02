@@ -4,6 +4,17 @@ import React, { useState, useId } from "react";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff } from "lucide-react";
 
+/**
+ * Function Input.
+ * @param {*} error - Input value used by the operation.
+ * @param {*} helperText - Input value used by the operation.
+ * @param {*} type - Input value used by the operation.
+ * @param {*} className - Input value used by the operation.
+ * @param {*} wrapperClassName - Input value used by the operation.
+ * @param {*} id - Input value used by the operation.
+ * @param {*} required - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function Input({
   label,
   error,

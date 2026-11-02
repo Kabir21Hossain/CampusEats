@@ -1,6 +1,13 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Function Badge.
+ * @param {*} variant - Input value used by the operation.
+ * @param {*} size - Input value used by the operation.
+ * @param {*} className - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function Badge({
   children,
   variant = "default",

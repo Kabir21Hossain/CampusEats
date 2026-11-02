@@ -50,6 +50,11 @@ const PAYMENT_STATUS_COLORS = {
   refunded: "#8b5cf6",
 };
 
+/**
+ * Function dateKey.
+ * @param {*} value - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function dateKey(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -57,11 +62,22 @@ function dateKey(value) {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Function numericValue.
+ * @param {*} value - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function numericValue(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
 }
 
+/**
+ * Function getDistribution.
+ * @param {*} orders - Input value used by the operation.
+ * @param {*} role - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function getDistribution(orders, role) {
   const counts = new Map();
   for (const order of orders) {
@@ -82,6 +98,15 @@ function getDistribution(orders, role) {
   return [...counts.values()];
 }
 
+/**
+ * Function getDashboardAnalytics.
+ * @param {*} orders - Input value used by the operation.
+ * @param {*} role - Input value used by the operation.
+ * @param {*} days - Input value used by the operation.
+ * @param {*} viewerId - Input value used by the operation.
+ * @param {*} now - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function getDashboardAnalytics(orders, role, days, viewerId, now = new Date()) {
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const start = new Date(today);

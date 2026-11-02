@@ -19,6 +19,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function AdminDisputesPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState([]);
   const [error, setError] = useState("");
@@ -52,12 +56,22 @@ export default function AdminDisputesPage() {
     loadDisputes();
   }, [loadDisputes]);
 
+  /**
+   * Arrow function handleOpenResolveModal.
+   * @param {*} disp - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const handleOpenResolveModal = (disp) => {
     setActiveDispute(disp);
     setRefundAmount(disp.amountBDT.toString());
     setResolutionText(`Approved full refund of ৳${disp.amountBDT} credited back to customer wallet.`);
   };
 
+  /**
+   * Arrow function handleResolveSubmit.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleResolveSubmit = async (e) => {
     e.preventDefault();
     if (!resolutionText.trim()) {

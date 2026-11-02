@@ -9,6 +9,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envLocalPath = path.resolve(__dirname, "../.env.local");
 const envPath = path.resolve(__dirname, "../.env");
 
+/**
+ * Function loadEnvFile.
+ * @param {*} filePath - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function loadEnvFile(filePath) {
   if (fs.existsSync(filePath)) {
     const lines = fs.readFileSync(filePath, "utf8").split("\n");
@@ -41,6 +46,10 @@ if (!uri) {
 
 const client = new MongoClient(uri);
 
+/**
+ * Function seed.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 async function seed() {
   console.log("Connecting to MongoDB to seed Better Auth users...");
   await client.connect();

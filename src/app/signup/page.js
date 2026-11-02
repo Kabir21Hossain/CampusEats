@@ -51,6 +51,10 @@ const initialForm = {
   deliveryZones: "",
 };
 
+/**
+ * Function SignupForm.
+ * @returns {*} The operation result.
+ */
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -65,10 +69,21 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /**
+   * Arrow function updateField.
+   * @param {*} field - Input value used by the operation.
+   * @param {*} value - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} event - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
@@ -386,6 +401,10 @@ function SignupForm() {
   );
 }
 
+/**
+ * Function SignupPage.
+ * @returns {*} The operation result.
+ */
 export default function SignupPage() {
   return (
     <Suspense fallback={null}>

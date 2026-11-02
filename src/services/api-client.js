@@ -5,6 +5,10 @@ if (!configuredApiUrl && process.env.NODE_ENV === "production") {
   );
 }
 
+/**
+ * Exports API_BASE_URL.
+ * @type {*} Exported application value.
+*/
 export const API_BASE_URL = (configuredApiUrl || "http://localhost:5000/api")
   .replace(/\/+$/, "");
 if (!API_BASE_URL.endsWith("/api")) {
@@ -27,8 +31,18 @@ if (process.env.NODE_ENV === "production") {
     throw new Error("NEXT_PUBLIC_API_BASE_URL must use HTTPS in production.");
   }
 }
+/**
+ * Exports AUTH_BASE_URL.
+ * @type {*} Exported application value.
+*/
 export const AUTH_BASE_URL = API_BASE_URL.replace(/\/api$/, "");
 
+/**
+ * Function createSuccessResponse.
+ * @param {*} data - Input value used by the operation.
+ * @param {*} meta - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function createSuccessResponse(data, meta = {}) {
   return {
     success: true,
@@ -38,6 +52,13 @@ export function createSuccessResponse(data, meta = {}) {
   };
 }
 
+/**
+ * Function createErrorResponse.
+ * @param {*} code - Input value used by the operation.
+ * @param {*} message - Input value used by the operation.
+ * @param {*} status - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function createErrorResponse(code, message, status = 400) {
   return {
     success: false,
@@ -51,6 +72,12 @@ export function createErrorResponse(code, message, status = 400) {
   };
 }
 
+/**
+ * Function apiRequest.
+ * @param {*} endpoint - Input value used by the operation.
+ * @param {*} options - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function apiRequest(endpoint, options = {}) {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {

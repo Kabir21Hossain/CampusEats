@@ -7,6 +7,10 @@ import { AuthProvider } from "@/context/auth-context";
 import { CartProvider } from "@/context/cart-context";
 import { Toaster } from "sonner";
 
+/**
+ * Function Providers.
+ * @returns {*} The operation result.
+ */
 export function Providers({ children }) {
   const [queryClient] = useState(
     () =>

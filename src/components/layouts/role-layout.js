@@ -9,6 +9,10 @@ import { Footer } from "@/components/shared/footer";
 import { DemoRoleBanner } from "@/components/shared/demo-role-banner";
 import { ShieldAlert } from "lucide-react";
 
+/**
+ * Function RoleLayoutInner.
+ * @returns {*} The operation result.
+ */
 function RoleLayoutInner({ children, activeRoleTitle }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -103,6 +107,11 @@ function RoleLayoutInner({ children, activeRoleTitle }) {
   );
 }
 
+/**
+ * Function RoleLayout.
+ * @param {*} props - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function RoleLayout(props) {
   return (
     <Suspense fallback={null}>

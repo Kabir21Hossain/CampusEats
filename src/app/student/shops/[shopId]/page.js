@@ -22,6 +22,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+/**
+ * Function ShopDetailContent.
+ * @returns {*} The operation result.
+ */
 function ShopDetailContent({ params }) {
   const unwrappedParams = use(params);
   const shopId = unwrappedParams.shopId;
@@ -269,6 +273,10 @@ function ShopDetailContent({ params }) {
   );
 }
 
+/**
+ * Function ShopDetailPage.
+ * @returns {*} The operation result.
+ */
 export default function ShopDetailPage({ params }) {
   return (
     <Suspense fallback={<div className="py-20 text-center text-sm text-zinc-500">Loading canteen menu...</div>}>

@@ -12,6 +12,10 @@ if (!authSecret || authSecret.length < 32) {
   throw new Error("BETTER_AUTH_SECRET must be configured with at least 32 characters.");
 }
 
+/**
+ * Exports auth.
+ * @type {*} Exported application value.
+*/
 export const auth = betterAuth({
   database: mongodbAdapter(db),
   secret: authSecret,
@@ -152,6 +156,10 @@ export const auth = betterAuth({
   },
 });
 
+/**
+ * Function getAuth.
+ * @returns {*} The operation result.
+ */
 export function getAuth() {
   return auth;
 }

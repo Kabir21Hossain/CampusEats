@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { adminService } from "@/services/admin-service";
 import { PersonalBkashSettings } from "@/components/profile/personal-bkash-settings";
 
+/**
+ * Function AdminPaymentSettingsPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminPaymentSettingsPage() {
   const [bkashPlatformNumber, setBkashPlatformNumber] = useState("");
   const [configured, setConfigured] = useState(false);
@@ -35,6 +39,11 @@ export default function AdminPaymentSettingsPage() {
     };
   }, []);
 
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} event - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);

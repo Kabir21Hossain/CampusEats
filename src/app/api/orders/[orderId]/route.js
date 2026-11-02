@@ -9,6 +9,11 @@ import {
   serializeOrderForUser,
 } from "@/lib/auth-server";
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request, { params }) {
   try {
     const { user, errorResponse } = await requireSession(request);
@@ -61,6 +66,11 @@ export async function GET(request, { params }) {
   }
 }
 
+/**
+ * Function PATCH.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function PATCH(request, { params }) {
   try {
     const { user, errorResponse } = await requireSession(request);

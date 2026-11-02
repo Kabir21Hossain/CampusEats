@@ -4,6 +4,10 @@ import React, { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
 
+/**
+ * Function ThemeToggle.
+ * @returns {*} The operation result.
+ */
 export function ThemeToggle({ className }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);

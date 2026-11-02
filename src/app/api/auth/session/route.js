@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth-server";
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request) {
   const headers = request.headers;
   try {

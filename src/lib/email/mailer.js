@@ -11,7 +11,17 @@ import nodemailer from "nodemailer";
 const SENDMAIL_PATH = process.env.SENDMAIL_PATH?.trim() || "sendmail";
 const EMAIL_FROM = process.env.EMAIL_FROM || "CampusEats <no-reply@campuseats.edu.bd>";
 
+/**
+ * Function resolveSendmailExecutable.
+ * @param {*} command - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function resolveSendmailExecutable(command) {
+  /**
+   * Arrow function canExecute.
+   * @param {*} filePath - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const canExecute = (filePath) => {
     try {
       accessSync(filePath, constants.X_OK);
@@ -67,6 +77,11 @@ function escapeHtml(str) {
 const ALLOWED_MIME_TYPES = ["application/pdf", "text/plain", "image/png", "image/jpeg"];
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
+/**
+ * Function validateAttachment.
+ * @param {*} attachment - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function validateAttachment(attachment) {
   if (!attachment) return null;
 
@@ -155,6 +170,12 @@ export async function sendEmail({ to, subject, html, text, attachments = [] }) {
  */
 
 export const emailTemplates = {
+  /**
+   * Method orderPlaced.
+   * @param {*} order - Input value used by the operation.
+   * @param {*} customer - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   orderPlaced(order, customer) {
     return {
       subject: `[CampusEats] Order #${order.id} Confirmed at ${order.shopName}`,
@@ -203,6 +224,13 @@ export const emailTemplates = {
     };
   },
 
+  /**
+   * Method orderPickedUpShopOwner.
+   * @param {*} order - Input value used by the operation.
+   * @param {*} shopOwner - Input value used by the operation.
+   * @param {*} rider - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   orderPickedUpShopOwner(order, shopOwner, rider) {
     return {
       subject: `[CampusEats] Order #${order.id} Picked Up by Rider ${rider?.name || ""}`,
@@ -223,6 +251,12 @@ export const emailTemplates = {
     };
   },
 
+  /**
+   * Method orderDeliveredCustomer.
+   * @param {*} order - Input value used by the operation.
+   * @param {*} customer - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   orderDeliveredCustomer(order, customer) {
     return {
       subject: `[CampusEats] Order #${order.id} Successfully Delivered!`,

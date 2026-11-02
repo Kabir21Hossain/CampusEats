@@ -10,6 +10,11 @@ const dashboardByRole = {
   [ROLES.ADMIN]: "/admin/dashboard",
 };
 
+/**
+ * Function requirePageRole.
+ * @param {*} requiredRole - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function requirePageRole(requiredRole) {
   const requestHeaders = await headers();
   const sessionData = await getServerSession({ headers: requestHeaders });

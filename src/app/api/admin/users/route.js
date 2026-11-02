@@ -6,6 +6,11 @@ import {
   userIdFilter,
 } from "@/lib/auth-server";
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request) {
   try {
     const { user, errorResponse } = await requireAdminSession(request);
@@ -31,6 +36,11 @@ export async function GET(request) {
   }
 }
 
+/**
+ * Function PATCH.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function PATCH(request) {
   try {
     const { user, errorResponse } = await requireAdminSession(request);

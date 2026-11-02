@@ -7,6 +7,11 @@ import { Modal } from "@/components/ui/modal";
 
 const RATING_LABELS = ["", "Needs improvement", "Fair", "Good", "Very good", "Excellent"];
 
+/**
+ * Function StarRating.
+ * @param {*} value - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function StarRating({ label, value, onChange }) {
   const [hovered, setHovered] = useState(0);
   const activeRating = hovered || value;
@@ -38,6 +43,13 @@ function StarRating({ label, value, onChange }) {
   );
 }
 
+/**
+ * Function CommentField.
+ * @param {*} label - Input value used by the operation.
+ * @param {*} value - Input value used by the operation.
+ * @param {*} onChange - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function CommentField({ id, label, value, onChange, placeholder }) {
   return (
     <div className="mt-3">
@@ -58,6 +70,12 @@ function CommentField({ id, label, value, onChange, placeholder }) {
   );
 }
 
+/**
+ * Function ReviewSection.
+ * @param {*} title - Input value used by the operation.
+ * @param {*} detail - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function ReviewSection({ icon: Icon, title, detail, children }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/70">
@@ -75,6 +93,13 @@ function ReviewSection({ icon: Icon, title, detail, children }) {
   );
 }
 
+/**
+ * Function OrderReviewModal.
+ * @param {*} onClose - Input value used by the operation.
+ * @param {*} order - Input value used by the operation.
+ * @param {*} isSubmitting - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function OrderReviewModal({ isOpen, onClose, order, isSubmitting, onSubmit }) {
   const [shopRating, setShopRating] = useState(0);
   const [shopComment, setShopComment] = useState("");
@@ -99,6 +124,13 @@ export function OrderReviewModal({ isOpen, onClose, order, isSubmitting, onSubmi
     ])));
   }, [isOpen, order?.id]);
 
+  /**
+   * Arrow function updateFoodReview.
+   * @param {*} itemId - Input value used by the operation.
+   * @param {*} key - Input value used by the operation.
+   * @param {*} value - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const updateFoodReview = (itemId, key, value) => {
     setFoodReviews((current) => ({
       ...current,
@@ -106,6 +138,11 @@ export function OrderReviewModal({ isOpen, onClose, order, isSubmitting, onSubmi
     }));
   };
 
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} event - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!hasRating) return;

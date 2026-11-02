@@ -20,6 +20,11 @@ const EDITABLE_MENU_FIELDS = new Set([
   "dietary",
 ]);
 
+/**
+ * Function PATCH.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function PATCH(request, { params }) {
   try {
     const { user, errorResponse } = await requireSession(request);
@@ -78,6 +83,11 @@ export async function PATCH(request, { params }) {
   }
 }
 
+/**
+ * Function DELETE.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function DELETE(request, { params }) {
   try {
     const { user, errorResponse } = await requireSession(request);

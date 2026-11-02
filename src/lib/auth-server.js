@@ -4,6 +4,11 @@ import { auth } from "./auth.js";
 import { ROLES } from "./constants.js";
 import { getCollection } from "./db.js";
 
+/**
+ * Function userIdFilter.
+ * @param {*} id - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function userIdFilter(id) {
   if (typeof id !== "string" || !id) return { _id: null };
   if (!ObjectId.isValid(id)) return { $or: [{ _id: id }, { id }] };
@@ -16,6 +21,11 @@ export function userIdFilter(id) {
   };
 }
 
+/**
+ * Function isActiveAccount.
+ * @param {*} user - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function isActiveAccount(user) {
   return Boolean(
     user &&
@@ -158,6 +168,11 @@ export function requireRole(user, allowedRoles = []) {
   return null;
 }
 
+/**
+ * Function requireAdminSession.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function requireAdminSession(request) {
   const sessionResult = await requireSession(request);
   if (sessionResult.errorResponse) return sessionResult;
@@ -168,6 +183,12 @@ export async function requireAdminSession(request) {
     : sessionResult;
 }
 
+/**
+ * Function isShopOwner.
+ * @param {*} shop - Input value used by the operation.
+ * @param {*} user - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function isShopOwner(shop, user) {
   if (!user) return false;
   if (user.role === ROLES.ADMIN) return true;
@@ -177,6 +198,12 @@ export function isShopOwner(shop, user) {
   return [shop?.ownerId, shop?.ownerUserId].includes(user.id);
 }
 
+/**
+ * Function isAssignedRider.
+ * @param {*} order - Input value used by the operation.
+ * @param {*} user - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function isAssignedRider(order, user) {
   if (!user) return false;
   if (user.role === ROLES.ADMIN) return true;
@@ -186,6 +213,12 @@ export function isAssignedRider(order, user) {
   return [order?.riderId, order?.riderUserId].includes(user.id);
 }
 
+/**
+ * Function isStudentOrderOwner.
+ * @param {*} order - Input value used by the operation.
+ * @param {*} user - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function isStudentOrderOwner(order, user) {
   return Boolean(
     order &&
@@ -196,6 +229,13 @@ export function isStudentOrderOwner(order, user) {
   );
 }
 
+/**
+ * Function isOrderParticipant.
+ * @param {*} order - Input value used by the operation.
+ * @param {*} user - Input value used by the operation.
+ * @param {*} shop - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function isOrderParticipant(order, user, shop = null) {
   if (!order || !user || typeof user.id !== "string" || !user.id) return false;
   return (
@@ -208,6 +248,12 @@ export function isOrderParticipant(order, user, shop = null) {
   );
 }
 
+/**
+ * Function serializeOrderForUser.
+ * @param {*} order - Input value used by the operation.
+ * @param {*} user - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function serializeOrderForUser(order, user) {
   const visibleOrder = { ...order };
   const shopCodeFields = [

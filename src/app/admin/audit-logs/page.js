@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 
+/**
+ * Function AdminAuditLogsPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminAuditLogsPage() {
   const [entries, setEntries] = useState([]);
   const [filters, setFilters] = useState({ action: "", actorId: "", targetId: "" });
@@ -36,6 +40,11 @@ export default function AdminAuditLogsPage() {
     loadEntries();
   }, [loadEntries]);
 
+  /**
+   * Arrow function applyFilters.
+   * @param {*} event - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const applyFilters = (event) => {
     event.preventDefault();
     setPage(1);

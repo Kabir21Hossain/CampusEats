@@ -17,6 +17,10 @@ import { formatCurrency } from "@/lib/utils";
 import { ArrowRight, Power, ShoppingBag, Store, TrendingUp } from "lucide-react";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
+/**
+ * Function ShopOwnerDashboardPage.
+ * @returns {*} The operation result.
+ */
 export default function ShopOwnerDashboardPage() {
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
@@ -52,6 +56,10 @@ export default function ShopOwnerDashboardPage() {
     loadData();
   }, [loadData]);
 
+  /**
+   * Arrow function handleToggleOpenStatus.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleToggleOpenStatus = async () => {
     const response = await shopService.toggleShopStatus(shop.id, !shop.isOpen);
     if (response.success) {

@@ -4,6 +4,10 @@ import { useEffect } from "react";
 import { AlertCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Function Error.
+ * @returns {*} The operation result.
+ */
 export default function Error({ error, reset }) {
   useEffect(() => {
     console.error("Runtime error caught:", error);

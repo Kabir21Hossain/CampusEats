@@ -9,6 +9,10 @@ export const ROLES = {
   ADMIN: "admin",
 };
 
+/**
+ * Exports ORDER_STATUS.
+ * @type {*} Exported application value.
+*/
 export const ORDER_STATUS = {
   PLACED: "placed",
   CONFIRMED: "accepted",
@@ -22,6 +26,10 @@ export const ORDER_STATUS = {
   DISPUTED: "disputed",
 };
 
+/**
+ * Exports ORDER_STATUS_LABELS.
+ * @type {*} Exported application value.
+*/
 export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.PLACED]: "Order Placed",
   [ORDER_STATUS.CONFIRMED]: "Accepted",
@@ -35,6 +43,10 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.DISPUTED]: "Under Dispute",
 };
 
+/**
+ * Exports ORDER_STATUS_COLORS.
+ * @type {*} Exported application value.
+*/
 export const ORDER_STATUS_COLORS = {
   [ORDER_STATUS.PLACED]: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800",
   [ORDER_STATUS.CONFIRMED]: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800",
@@ -48,6 +60,10 @@ export const ORDER_STATUS_COLORS = {
 };
 
 // Escrow split definition
+/**
+ * Exports ESCROW_CONFIG.
+ * @type {*} Exported application value.
+*/
 export const ESCROW_CONFIG = {
   SHOP_PERCENTAGE: 0.85,
   RIDER_PERCENTAGE: 0.12,
@@ -55,10 +71,22 @@ export const ESCROW_CONFIG = {
 };
 
 // Base delivery fee in BDT
+/**
+ * Exports DEFAULT_DELIVERY_FEE.
+ * @type {*} Exported application value.
+*/
 export const DEFAULT_DELIVERY_FEE = 20;
+/**
+ * Exports DEFAULT_PLATFORM_FEE.
+ * @type {*} Exported application value.
+*/
 export const DEFAULT_PLATFORM_FEE = 5;
 
 // Campus Dormitories and Landmark addresses
+/**
+ * Exports CAMPUS_LOCATIONS.
+ * @type {*} Exported application value.
+*/
 export const CAMPUS_LOCATIONS = [
   "Al Beruni Hall",
   "Bangabandhu Sheikh Mujibur Rahman Hall",
@@ -79,6 +107,10 @@ export const CAMPUS_LOCATIONS = [
   "Main Gate",
 ];
 
+/**
+ * Exports CUISINE_CATEGORIES.
+ * @type {*} Exported application value.
+*/
 export const CUISINE_CATEGORIES = [
   "All",
   "Biryani & Rice",

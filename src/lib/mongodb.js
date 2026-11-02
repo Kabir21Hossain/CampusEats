@@ -17,6 +17,11 @@ const options = {
 let client = null;
 let clientPromise = null;
 
+/**
+ * Function createConnection.
+ * @param {*} onFailure - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function createConnection(onFailure) {
   const newClient = new MongoClient(uri, options);
   const promise = newClient.connect().catch((error) => {

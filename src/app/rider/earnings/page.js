@@ -11,6 +11,10 @@ import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
+/**
+ * Function RiderEarningsPage.
+ * @returns {*} The operation result.
+ */
 export default function RiderEarningsPage() {
   const { currentUser } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -60,6 +64,11 @@ export default function RiderEarningsPage() {
     loadData();
   }, [loadData]);
 
+  /**
+   * Arrow function requestPayout.
+   * @param {*} event - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const requestPayout = async (event) => {
     event.preventDefault();
     if (!/^\d+(?:\.\d{1,2})?$/.test(amount)) {

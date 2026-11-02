@@ -5,6 +5,10 @@
 
 import { ORDER_STATUS, ESCROW_CONFIG, DEFAULT_DELIVERY_FEE } from "@/lib/constants";
 
+/**
+ * Exports INITIAL_SHOPS.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_SHOPS = [
   {
     id: "shop-1",
@@ -122,6 +126,10 @@ export const INITIAL_SHOPS = [
   },
 ];
 
+/**
+ * Exports INITIAL_MENU_ITEMS.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_MENU_ITEMS = [
   // Shop 1: Campus Grill & Cafe
   {
@@ -364,6 +372,10 @@ export const INITIAL_MENU_ITEMS = [
   },
 ];
 
+/**
+ * Exports INITIAL_USERS.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_USERS = [
   {
     id: "student-1",
@@ -416,6 +428,10 @@ export const INITIAL_USERS = [
   },
 ];
 
+/**
+ * Exports INITIAL_ORDERS.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_ORDERS = [
   {
     id: "CE-9401",
@@ -550,6 +566,10 @@ export const INITIAL_ORDERS = [
   },
 ];
 
+/**
+ * Exports INITIAL_SHOP_APPLICATIONS.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_SHOP_APPLICATIONS = [
   {
     id: "app-101",
@@ -586,6 +606,10 @@ export const INITIAL_SHOP_APPLICATIONS = [
   },
 ];
 
+/**
+ * Exports INITIAL_DISPUTES.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_DISPUTES = [
   {
     id: "disp-501",
@@ -617,6 +641,10 @@ export const INITIAL_DISPUTES = [
   },
 ];
 
+/**
+ * Exports INITIAL_NOTIFICATIONS.
+ * @type {*} Exported application value.
+*/
 export const INITIAL_NOTIFICATIONS = [
   {
     id: "notif-1",

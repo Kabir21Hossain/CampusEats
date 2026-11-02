@@ -37,6 +37,10 @@ const SHOP_ORDER_STATUS_FILTERS = [
   { value: "refunded", label: "Refunded" },
 ];
 
+/**
+ * Function ShopOwnerOrdersPage.
+ * @returns {*} The operation result.
+ */
 export default function ShopOwnerOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +78,12 @@ export default function ShopOwnerOrdersPage() {
 
   usePolling(() => loadOrders(false), 10000);
 
+  /**
+   * Arrow function handleUpdateStatus.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} newStatus - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleUpdateStatus = async (orderId, newStatus) => {
     const res = await orderService.updateOrderStatus(orderId, newStatus);
     if (res.success) {
@@ -85,6 +95,10 @@ export default function ShopOwnerOrdersPage() {
     }
   };
 
+  /**
+   * Arrow function handleReject.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleReject = async () => {
     if (!rejectionReason.trim() || rejectionReason.trim().length > 500) return;
     const res = await orderService.updateOrderStatus(
@@ -103,6 +117,11 @@ export default function ShopOwnerOrdersPage() {
     }
   };
 
+  /**
+   * Arrow function handleShowHandoverCode.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleShowHandoverCode = async (orderId) => {
     setHandoverLoadingOrderId(orderId);
     const res = await orderService.getOrderById(orderId);
@@ -114,6 +133,10 @@ export default function ShopOwnerOrdersPage() {
     setHandoverLoadingOrderId("");
   };
 
+  /**
+   * Arrow function handleReissueHandoverCode.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleReissueHandoverCode = async () => {
     if (!activeQRModalOrder) return;
     setCodeReissueLoading(true);

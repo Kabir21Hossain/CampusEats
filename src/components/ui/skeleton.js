@@ -1,6 +1,10 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Function Skeleton.
+ * @returns {*} The operation result.
+ */
 export function Skeleton({ className, ...props }) {
   return (
     <div
@@ -13,6 +17,10 @@ export function Skeleton({ className, ...props }) {
   );
 }
 
+/**
+ * Function ShopCardSkeleton.
+ * @returns {*} The operation result.
+ */
 export function ShopCardSkeleton() {
   return (
     <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 p-4 space-y-3">

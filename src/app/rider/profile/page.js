@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut } from "lucide-react";
 import { PersonalBkashSettings } from "@/components/profile/personal-bkash-settings";
 
+/**
+ * Function RiderProfilePage.
+ * @returns {*} The operation result.
+ */
 export default function RiderProfilePage() {
   const { currentUser, isPending, logout } = useAuth();
 

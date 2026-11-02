@@ -27,6 +27,11 @@ const RANGES = [
   { days: 90, label: "90 days" },
 ];
 
+/**
+ * Arrow function formatCurrency.
+ * @param {*} value - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-BD", {
     style: "currency",
@@ -34,6 +39,12 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
 
+/**
+ * Function ChartTooltip.
+ * @param {*} payload - Input value used by the operation.
+ * @param {*} label - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function ChartTooltip({ active, payload, label, format }) {
   if (!active || !payload?.length) return null;
   return (
@@ -54,6 +65,10 @@ function ChartTooltip({ active, payload, label, format }) {
   );
 }
 
+/**
+ * Function ChartCard.
+ * @returns {*} The operation result.
+ */
 function ChartCard({ chart }) {
   const Chart = chart.type === "bar" ? BarChart : chart.type === "area" ? AreaChart : LineChart;
   const axisFormatter = chart.format === "currency"
@@ -141,6 +156,12 @@ function ChartCard({ chart }) {
   );
 }
 
+/**
+ * Function DistributionCard.
+ * @param {*} description - Input value used by the operation.
+ * @param {*} data - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function DistributionCard({ title, description, data, hasOrders }) {
   return (
     <Card>
@@ -185,6 +206,12 @@ function DistributionCard({ title, description, data, hasOrders }) {
   );
 }
 
+/**
+ * Function DashboardAnalytics.
+ * @param {*} role - Input value used by the operation.
+ * @param {*} viewerId - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function DashboardAnalytics({ orders, role, viewerId, error }) {
   const [days, setDays] = useState(30);
   const analytics = useMemo(

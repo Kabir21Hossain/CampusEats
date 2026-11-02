@@ -5,6 +5,12 @@ import { ORDER_STATUS } from "@/lib/constants";
 import { Check, Clock, ChefHat, Bike, PackageCheck, AlertCircle } from "lucide-react";
 import { cn, formatTime } from "@/lib/utils";
 
+/**
+ * Function OrderStatusStepper.
+ * @param {*} timestamps - Input value used by the operation.
+ * @param {*} rejectionReason - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function OrderStatusStepper({ status, timestamps = {}, rejectionReason = "" }) {
   const steps = [
     {
@@ -51,6 +57,11 @@ export function OrderStatusStepper({ status, timestamps = {}, rejectionReason = 
     },
   ];
 
+  /**
+   * Arrow function getStatusIndex.
+   * @param {*} currentStatus - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const getStatusIndex = (currentStatus) => {
     switch (currentStatus) {
       case ORDER_STATUS.PLACED:

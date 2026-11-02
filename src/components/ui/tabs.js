@@ -3,6 +3,12 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Function Tabs.
+ * @param {*} activeTab - Input value used by the operation.
+ * @param {*} onChange - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function Tabs({ tabs, activeTab, onChange, className }) {
   return (
     <div

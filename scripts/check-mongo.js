@@ -8,6 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envLocalPath = path.resolve(__dirname, "../.env.local");
 const envPath = path.resolve(__dirname, "../.env");
 
+/**
+ * Function loadEnvFile.
+ * @param {*} filePath - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function loadEnvFile(filePath) {
   if (fs.existsSync(filePath)) {
     const lines = fs.readFileSync(filePath, "utf8").split("\n");
@@ -48,6 +53,10 @@ const maskedUri = uri.replace(/\/\/([^:]+):([^@]+)@/, "//***:***@");
 console.log(`📡 Target Database : ${dbName}`);
 console.log(`🔗 Target Host     : ${maskedUri}`);
 
+/**
+ * Function runCheck.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 async function runCheck() {
   const client = new MongoClient(uri, {
     serverSelectionTimeoutMS: 5000,

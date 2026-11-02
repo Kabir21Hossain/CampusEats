@@ -9,6 +9,11 @@ import {
 } from "@/lib/auth-server";
 import { sendEmail, emailTemplates } from "@/lib/email/mailer";
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request) {
   try {
     const { user, errorResponse } = await requireSession(request);
@@ -73,6 +78,11 @@ export async function GET(request) {
   }
 }
 
+/**
+ * Function POST.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function POST(request) {
   try {
     const { user, errorResponse } = await requireSession(request);

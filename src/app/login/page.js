@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { UtensilsCrossed, Lock, Mail } from "lucide-react";
 
+/**
+ * Function LoginPage.
+ * @returns {*} The operation result.
+ */
 export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -17,6 +21,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /**
+   * Arrow function handleFormSubmit.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError("");

@@ -10,6 +10,10 @@ import { Store, MapPin, Save, Image as ImageIcon, Smartphone } from "lucide-reac
 import { toast } from "sonner";
 import { PersonalBkashSettings } from "@/components/profile/personal-bkash-settings";
 
+/**
+ * Function ShopOwnerSettingsPage.
+ * @returns {*} The operation result.
+ */
 export default function ShopOwnerSettingsPage() {
   const { currentUser } = useAuth();
   const [shop, setShop] = useState(null);
@@ -21,6 +25,10 @@ export default function ShopOwnerSettingsPage() {
 
   useEffect(() => {
     let active = true;
+    /**
+     * Function loadSettings.
+     * @returns {Promise<*>} Resolves with the operation result.
+     */
     async function loadSettings() {
       const response = await shopService.getShopByOwner(currentUser?.id);
       if (!active) return;
@@ -44,6 +52,11 @@ export default function ShopOwnerSettingsPage() {
     };
   }, [currentUser?.id]);
 
+  /**
+   * Arrow function handleSave.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -61,6 +74,11 @@ export default function ShopOwnerSettingsPage() {
     }
   };
 
+  /**
+   * Arrow function handlePaymentSave.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handlePaymentSave = async (e) => {
     e.preventDefault();
     setPaymentSaving(true);

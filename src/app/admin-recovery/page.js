@@ -10,6 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiRequest } from "@/services/api-client";
 import { Lock, Mail, Phone, ShieldCheck, User } from "lucide-react";
 
+/**
+ * Function AdminRecoveryPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminRecoveryPage() {
   const [recoveryToken, setRecoveryToken] = useState("");
   const [email, setEmail] = useState("");
@@ -33,6 +37,11 @@ export default function AdminRecoveryPage() {
     }
   }, []);
 
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} event - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");

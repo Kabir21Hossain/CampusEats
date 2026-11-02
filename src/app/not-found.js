@@ -2,6 +2,10 @@ import Link from "next/link";
 import { UtensilsCrossed, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Function NotFound.
+ * @returns {*} The operation result.
+ */
 export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee]">

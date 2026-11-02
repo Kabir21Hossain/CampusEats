@@ -27,6 +27,10 @@ import {
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 
+/**
+ * Function RiderActiveDeliveryPage.
+ * @returns {*} The operation result.
+ */
 export default function RiderActiveDeliveryPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
@@ -35,6 +39,10 @@ export default function RiderActiveDeliveryPage() {
   const [loadError, setLoadError] = useState("");
   const [activeStep, setActiveStep] = useState(1); // 1 = pickup, 3 = delivery route, 4 = delivery verification, 5 = completed
 
+  /**
+   * Arrow function loadActiveOrder.
+   * @returns {*} The operation result.
+   */
   const loadActiveOrder = () => {
     setLoading(true);
     riderService.getActiveDelivery().then((res) => {
@@ -58,6 +66,11 @@ export default function RiderActiveDeliveryPage() {
     loadActiveOrder();
   }, [currentUser]);
 
+  /**
+   * Arrow function handleVerifyPickup.
+   * @param {*} code - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleVerifyPickup = async (code) => {
     const res = await riderService.verifyPickup(order.id, code);
     if (res.success) {
@@ -70,6 +83,11 @@ export default function RiderActiveDeliveryPage() {
     }
   };
 
+  /**
+   * Arrow function handleVerifyDelivery.
+   * @param {*} code - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleVerifyDelivery = async (code) => {
     const res = await riderService.verifyDelivery(order.id, code);
     if (res.success) {

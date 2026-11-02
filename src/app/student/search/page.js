@@ -23,6 +23,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function SearchContent.
+ * @returns {*} The operation result.
+ */
 export function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
@@ -74,6 +78,11 @@ export function SearchContent() {
     return 0; // default order
   });
 
+  /**
+   * Arrow function getShopForItem.
+   * @param {*} shopId - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const getShopForItem = (shopId) => {
     return shops.find((s) => s.id === shopId) || { id: shopId, name: "Campus Canteen" };
   };
@@ -232,6 +241,10 @@ export function SearchContent() {
   );
 }
 
+/**
+ * Function StudentSearchPage.
+ * @returns {*} The operation result.
+ */
 export default function StudentSearchPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-xs">Loading search...</div>}>

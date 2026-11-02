@@ -19,11 +19,21 @@ const EDITABLE_SHOP_FIELDS = new Set([
   "bkashNumber",
 ]);
 
+/**
+ * Function publicShop.
+ * @param {*} shop - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function publicShop(shop) {
   const { bkashNumber, paymentDetails, ...safeShop } = shop;
   return safeShop;
 }
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request, { params }) {
   try {
     const { shopId } = await params;
@@ -49,6 +59,11 @@ export async function GET(request, { params }) {
   }
 }
 
+/**
+ * Function PATCH.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function PATCH(request, { params }) {
   try {
     const { user, errorResponse } = await requireSession(request);

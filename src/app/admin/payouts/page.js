@@ -18,6 +18,10 @@ const PAYOUT_STATUSES = [
   ["all", "All"],
 ];
 
+/**
+ * Function AdminPayoutsPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminPayoutsPage() {
   const [payouts, setPayouts] = useState([]);
   const [status, setStatus] = useState("requested");
@@ -51,6 +55,12 @@ export default function AdminPayoutsPage() {
     loadPayouts();
   }, [loadPayouts]);
 
+  /**
+   * Arrow function transition.
+   * @param {*} payout - Input value used by the operation.
+   * @param {*} action - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const transition = async (payout, action) => {
     const input = fields[payout.id] || {};
     if (["reject", "fail"].includes(action) && !String(input.reason || "").trim()) {
@@ -75,6 +85,13 @@ export default function AdminPayoutsPage() {
     await loadPayouts();
   };
 
+  /**
+   * Arrow function updateField.
+   * @param {*} payoutId - Input value used by the operation.
+   * @param {*} key - Input value used by the operation.
+   * @param {*} value - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const updateField = (payoutId, key, value) => {
     setFields((current) => ({
       ...current,

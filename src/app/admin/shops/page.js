@@ -22,6 +22,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function AdminShopApprovalsPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminShopApprovalsPage() {
   const [applications, setApplications] = useState([]);
   const [existingShops, setExistingShops] = useState([]);
@@ -60,6 +64,11 @@ export default function AdminShopApprovalsPage() {
     loadData();
   }, [loadData]);
 
+  /**
+   * Arrow function handleApprove.
+   * @param {*} app - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleApprove = async (app) => {
     setActionLoading(true);
     const res = await adminService.reviewShopApplication(app.id, "approved");
@@ -72,6 +81,10 @@ export default function AdminShopApprovalsPage() {
     }
   };
 
+  /**
+   * Arrow function handleRejectConfirm.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleRejectConfirm = async () => {
     if (!rejectReason.trim()) {
       toast.error("Please provide a reason for rejection.");

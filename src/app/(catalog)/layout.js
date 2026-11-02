@@ -1,6 +1,10 @@
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 
+/**
+ * Function CatalogLayout.
+ * @returns {*} The operation result.
+ */
 export default function CatalogLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee]">

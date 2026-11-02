@@ -2,6 +2,15 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
+/**
+ * Function EmptyState.
+ * @param {*} title - Input value used by the operation.
+ * @param {*} description - Input value used by the operation.
+ * @param {*} actionText - Input value used by the operation.
+ * @param {*} onAction - Input value used by the operation.
+ * @param {*} className - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function EmptyState({
   icon: Icon,
   title,

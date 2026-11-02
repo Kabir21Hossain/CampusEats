@@ -4,6 +4,17 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
+/**
+ * Function Button.
+ * @param {*} className - Input value used by the operation.
+ * @param {*} variant - Input value used by the operation.
+ * @param {*} size - Input value used by the operation.
+ * @param {*} isLoading - Input value used by the operation.
+ * @param {*} disabled - Input value used by the operation.
+ * @param {*} type - Input value used by the operation.
+ * @param {*} onClick - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function Button({
   children,
   className,

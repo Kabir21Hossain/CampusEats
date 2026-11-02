@@ -7,6 +7,11 @@ import {
   serializeOrderForUser,
 } from "@/lib/auth-server";
 
+/**
+ * Function POST.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function POST(request) {
   try {
     const { user, errorResponse } = await requireSession(request);

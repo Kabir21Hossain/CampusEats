@@ -22,6 +22,10 @@ import {
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 
+/**
+ * Function CheckoutContent.
+ * @returns {*} The operation result.
+ */
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,11 +58,20 @@ function CheckoutContent() {
     );
   }
 
+  /**
+   * Arrow function handleInitiateOrder.
+   * @param {*} e - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const handleInitiateOrder = (e) => {
     e.preventDefault();
     executeOrderCreation();
   };
 
+  /**
+   * Arrow function executeOrderCreation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const executeOrderCreation = async () => {
     setIsPlacing(true);
     const orderPayload = {
@@ -293,6 +306,10 @@ function CheckoutContent() {
   );
 }
 
+/**
+ * Function StudentCheckoutPage.
+ * @returns {*} The operation result.
+ */
 export default function StudentCheckoutPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-xs">Loading checkout...</div>}>

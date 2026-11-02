@@ -10,6 +10,10 @@ import { notificationService } from "@/services";
 
 const AuthContext = createContext(null);
 
+/**
+ * Function AuthProvider.
+ * @returns {*} The operation result.
+ */
 export function AuthProvider({ children }) {
   const router = useRouter();
   const { data: sessionData, isPending, refetch } = useSession();
@@ -177,6 +181,11 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Arrow function markNotificationRead.
+   * @param {*} notifId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const markNotificationRead = async (notifId) => {
     const previous = notifications;
     setNotifications((prev) => prev.map((n) =>
@@ -192,6 +201,10 @@ export function AuthProvider({ children }) {
     return true;
   };
 
+  /**
+   * Arrow function markAllNotificationsRead.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const markAllNotificationsRead = async () => {
     const previous = notifications;
     setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
@@ -240,6 +253,10 @@ export function AuthProvider({ children }) {
   );
 }
 
+/**
+ * Function useAuth.
+ * @returns {*} The operation result.
+ */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

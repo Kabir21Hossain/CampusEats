@@ -12,12 +12,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * Exports metadata.
+ * @type {*} Exported application value.
+*/
 export const metadata = {
   title: "CampusEats — Campus Food & Dorm Delivery",
   description:
     "Peer-to-peer campus food ordering and dormitory delivery platform connecting students, university shops, and student riders.",
 };
 
+/**
+ * Function RootLayout.
+ * @returns {*} The operation result.
+ */
 export default function RootLayout({ children }) {
   return (
     <html

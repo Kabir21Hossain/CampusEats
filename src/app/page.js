@@ -28,6 +28,10 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+/**
+ * Function LandingPage.
+ * @returns {*} The operation result.
+ */
 export default function LandingPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +63,11 @@ export default function LandingPage() {
 
   const featuredShop = shops[0];
 
+  /**
+   * Arrow function handleSearchSubmit.
+   * @param {*} e - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {

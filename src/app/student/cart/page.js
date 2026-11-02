@@ -21,6 +21,10 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
+/**
+ * Function StudentCartPage.
+ * @returns {*} The operation result.
+ */
 export default function StudentCartPage() {
   const router = useRouter();
   const {

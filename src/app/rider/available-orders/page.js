@@ -24,6 +24,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function RiderAvailableOrdersPage.
+ * @returns {*} The operation result.
+ */
 export default function RiderAvailableOrdersPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
@@ -87,6 +91,10 @@ export default function RiderAvailableOrdersPage() {
     };
   }, [currentUser?.id]);
 
+  /**
+   * Arrow function handleAvailabilityChange.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleAvailabilityChange = async () => {
     if (availabilityLoading) return;
     setAvailabilityLoading(true);
@@ -101,6 +109,11 @@ export default function RiderAvailableOrdersPage() {
     toast.info(result.data.isOnline ? "You are now online for delivery requests." : "You are now offline.");
   };
 
+  /**
+   * Arrow function handleClaim.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleClaim = async (orderId) => {
     setClaimingId(orderId);
     const res = await riderService.claimOrder(

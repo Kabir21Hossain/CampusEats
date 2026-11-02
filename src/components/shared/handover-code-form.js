@@ -4,6 +4,12 @@ import React, { useState } from "react";
 import { AlertCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Function HandoverCodeForm.
+ * @param {*} actionLabel - Input value used by the operation.
+ * @param {*} codeLength - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function HandoverCodeForm({
   onVerify,
   actionLabel = "Confirm Handover",
@@ -13,6 +19,11 @@ export function HandoverCodeForm({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} e - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSubmit = async (e) => {
     e?.preventDefault();
     if (isSubmitting) return;

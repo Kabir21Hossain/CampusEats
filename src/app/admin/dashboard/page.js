@@ -10,6 +10,10 @@ import { ShoppingBag, Store, Users, TrendingUp } from "lucide-react";
 import { orderService } from "@/services/order-service";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
+/**
+ * Function AdminDashboardPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");

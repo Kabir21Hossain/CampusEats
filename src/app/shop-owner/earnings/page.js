@@ -4,6 +4,10 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+/**
+ * Function ShopOwnerEarningsPage.
+ * @returns {*} The operation result.
+ */
 export default function ShopOwnerEarningsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">

@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getCollection } from "@/lib/db";
 import { requireAdminSession } from "@/lib/auth-server";
 
+/**
+ * Function GET.
+ * @param {*} request - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 export async function GET(request) {
   try {
     const { errorResponse } = await requireAdminSession(request);

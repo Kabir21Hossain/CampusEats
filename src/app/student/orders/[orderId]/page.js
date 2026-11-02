@@ -27,6 +27,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function OrderTrackingPage.
+ * @returns {*} The operation result.
+ */
 export default function OrderTrackingPage({ params }) {
   const unwrappedParams = use(params);
   const orderId = unwrappedParams.orderId;
@@ -105,6 +109,10 @@ export default function OrderTrackingPage({ params }) {
     ORDER_STATUS.AWAITING_RIDER,
   ].includes(order.status);
 
+  /**
+   * Arrow function handleCancelOrder.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleCancelOrder = async () => {
     setActionLoading(true);
     const result = await orderService.cancelOrder(order.id);
@@ -117,6 +125,10 @@ export default function OrderTrackingPage({ params }) {
     }
   };
 
+  /**
+   * Arrow function handleReissueDeliveryCode.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleReissueDeliveryCode = async () => {
     setCodeReissueLoading(true);
     const result = await orderService.reissueVerificationCode(order.id, "delivery");
@@ -129,6 +141,11 @@ export default function OrderTrackingPage({ params }) {
     toast.success("A new delivery code is ready.");
   };
 
+  /**
+   * Arrow function handleRateOrder.
+   * @param {*} review - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleRateOrder = async (review) => {
     setActionLoading(true);
     const result = await orderService.rateOrder(order.id, review);
@@ -142,6 +159,11 @@ export default function OrderTrackingPage({ params }) {
     }
   };
 
+  /**
+   * Arrow function handleSubmitPaymentReference.
+   * @param {*} payment - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSubmitPaymentReference = async (payment) => {
     const reference = String(paymentReferences[payment.obligation] || "").trim();
     if (!reference) {

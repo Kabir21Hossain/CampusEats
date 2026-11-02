@@ -5,6 +5,12 @@ import { ShieldCheck, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+/**
+ * Function HandoverCodeDisplay.
+ * @param {*} title - Input value used by the operation.
+ * @param {*} subtitle - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function HandoverCodeDisplay({
   code,
   title = "Handover Verification Code",
@@ -12,6 +18,10 @@ export function HandoverCodeDisplay({
 }) {
   const [copied, setCopied] = useState(false);
 
+  /**
+   * Arrow function copyCode.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const copyCode = async () => {
     if (!code) return;
     if (!navigator.clipboard) {

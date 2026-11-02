@@ -1,8 +1,19 @@
 import { apiRequest, createErrorResponse, createSuccessResponse } from "./api-client";
 import { ORDER_STATUS } from "@/lib/constants";
 
+/**
+ * Arrow function responseItem.
+ * @param {*} response - Input value used by the operation.
+ * @param {*} key - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 const responseItem = (response, key) => response.data?.[key];
 
+/**
+ * Function normalizeShop.
+ * @param {*} shop - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function normalizeShop(shop) {
   return {
     ...shop,
@@ -13,6 +24,11 @@ function normalizeShop(shop) {
   };
 }
 
+/**
+ * Function normalizeMenuItem.
+ * @param {*} item - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function normalizeMenuItem(item) {
   return {
     ...item,
@@ -21,6 +37,11 @@ function normalizeMenuItem(item) {
   };
 }
 
+/**
+ * Function normalizeOrder.
+ * @param {*} order - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function normalizeOrder(order) {
   const riderUserId = order.riderUserId || order.riderId || null;
   let status = order.status;
@@ -56,12 +77,22 @@ function normalizeOrder(order) {
   };
 }
 
+/**
+ * Function responseMeta.
+ * @param {*} response - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 function responseMeta(response) {
   return response.meta?.notificationWarning
     ? { notificationWarning: response.meta.notificationWarning }
     : {};
 }
 
+/**
+ * Function listShopMenu.
+ * @param {*} shopId - Input value used by the operation.
+ * @returns {Promise<*>} Resolves with the operation result.
+ */
 async function listShopMenu(shopId) {
   const response = await apiRequest(`/shops/${encodeURIComponent(shopId)}/menu`);
   if (!response.success) return response;
@@ -72,7 +103,16 @@ async function listShopMenu(shopId) {
   return createSuccessResponse(items.map(normalizeMenuItem));
 }
 
+/**
+ * Exports shopService.
+ * @type {*} Exported application value.
+*/
 export const shopService = {
+  /**
+   * Method listShops.
+   * @param {*} category - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listShops({ query = "", category = "All" } = {}) {
     const response = await apiRequest("/shops");
     if (!response.success) return response;
@@ -98,6 +138,11 @@ export const shopService = {
     return createSuccessResponse(filtered, { total: filtered.length });
   },
 
+  /**
+   * Method getShopById.
+   * @param {*} shopId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getShopById(shopId) {
     const response = await apiRequest(`/shops/${encodeURIComponent(shopId)}`);
     if (!response.success) return response;
@@ -107,6 +152,11 @@ export const shopService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no shop.", 502);
   },
 
+  /**
+   * Method getShopByOwner.
+   * @param {*} ownerId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getShopByOwner(ownerId) {
     const response = await this.listShops();
     if (!response.success) return response;
@@ -116,6 +166,11 @@ export const shopService = {
       : createErrorResponse("NOT_FOUND", "No shop is assigned to this account.", 404);
   },
 
+  /**
+   * Method createShop.
+   * @param {*} shopData - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async createShop(shopData) {
     const response = await apiRequest("/shops", {
       method: "POST",
@@ -128,10 +183,22 @@ export const shopService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no created shop.", 502);
   },
 
+  /**
+   * Method toggleShopStatus.
+   * @param {*} shopId - Input value used by the operation.
+   * @param {*} isOpen - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async toggleShopStatus(shopId, isOpen) {
     return this.updateShop(shopId, { isOpen });
   },
 
+  /**
+   * Method updateShop.
+   * @param {*} shopId - Input value used by the operation.
+   * @param {*} updates - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async updateShop(shopId, updates) {
     const payload = { ...updates };
     if (payload.campusLocation !== undefined) {
@@ -158,6 +225,11 @@ export const shopService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated shop.", 502);
   },
 
+  /**
+   * Method getPaymentSettings.
+   * @param {*} shopId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getPaymentSettings(shopId) {
     const response = await apiRequest(
       `/shops/${encodeURIComponent(shopId)}/payment-settings`
@@ -169,6 +241,12 @@ export const shopService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no shop payment settings.", 502);
   },
 
+  /**
+   * Method updatePaymentSettings.
+   * @param {*} shopId - Input value used by the operation.
+   * @param {*} bkashNumber - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async updatePaymentSettings(shopId, bkashNumber) {
     const response = await apiRequest(
       `/shops/${encodeURIComponent(shopId)}/payment-settings`,
@@ -185,7 +263,17 @@ export const shopService = {
   },
 };
 
+/**
+ * Exports menuService.
+ * @type {*} Exported application value.
+*/
 export const menuService = {
+  /**
+   * Method listMenuItems.
+   * @param {*} shopId - Input value used by the operation.
+   * @param {*} category - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listMenuItems(shopId, category = "All") {
     let items;
     if (shopId) {
@@ -209,6 +297,11 @@ export const menuService = {
     return createSuccessResponse(filtered);
   },
 
+  /**
+   * Method createMenuItem.
+   * @param {*} itemData - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async createMenuItem(itemData) {
     const response = await apiRequest("/menu", {
       method: "POST",
@@ -221,6 +314,12 @@ export const menuService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no created menu item.", 502);
   },
 
+  /**
+   * Method updateMenuItem.
+   * @param {*} itemId - Input value used by the operation.
+   * @param {*} updates - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async updateMenuItem(itemId, updates) {
     const response = await apiRequest(`/menu/${encodeURIComponent(itemId)}`, {
       method: "PATCH",
@@ -233,6 +332,11 @@ export const menuService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated menu item.", 502);
   },
 
+  /**
+   * Method deleteMenuItem.
+   * @param {*} itemId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async deleteMenuItem(itemId) {
     const response = await apiRequest(`/menu/${encodeURIComponent(itemId)}`, {
       method: "DELETE",
@@ -242,7 +346,18 @@ export const menuService = {
   },
 };
 
+/**
+ * Exports orderService.
+ * @type {*} Exported application value.
+*/
 export const orderService = {
+  /**
+   * Method listOrders.
+   * @param {*} limit - Input value used by the operation.
+   * @param {*} from - Input value used by the operation.
+   * @param {*} to - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listOrders({ page, limit, from, to, status } = {}) {
     const query = new URLSearchParams();
     if (page !== undefined) query.set("page", String(page));
@@ -260,6 +375,11 @@ export const orderService = {
     return createSuccessResponse(orders.map(normalizeOrder), responseItem(response, "meta") || {});
   },
 
+  /**
+   * Method getOrderById.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getOrderById(orderId) {
     const response = await apiRequest(`/orders/${encodeURIComponent(orderId)}`);
     if (!response.success) return response;
@@ -269,6 +389,12 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no order.", 502);
   },
 
+  /**
+   * Method reissueVerificationCode.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} codeType - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async reissueVerificationCode(orderId, codeType) {
     const response = await apiRequest(
       `/orders/${encodeURIComponent(orderId)}/codes/reissue`,
@@ -284,6 +410,12 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated order.", 502);
   },
 
+  /**
+   * Method createOrder.
+   * @param {*} orderPayload - Input value used by the operation.
+   * @param {*} idempotencyKey - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async createOrder(orderPayload, idempotencyKey) {
     const response = await apiRequest("/orders", {
       method: "POST",
@@ -307,6 +439,13 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no created order.", 502);
   },
 
+  /**
+   * Method updateOrderStatus.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} status - Input value used by the operation.
+   * @param {*} rejectionReason - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async updateOrderStatus(orderId, status, rejectionReason) {
     const response = await apiRequest(
       `/orders/${encodeURIComponent(orderId)}/status`,
@@ -325,6 +464,11 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated order.", 502);
   },
 
+  /**
+   * Method cancelOrder.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async cancelOrder(orderId) {
     const response = await apiRequest(
       `/orders/${encodeURIComponent(orderId)}/cancel`,
@@ -337,6 +481,12 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no cancelled order.", 502);
   },
 
+  /**
+   * Method rateOrder.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} rating - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async rateOrder(orderId, rating) {
     const response = await apiRequest(
       `/orders/${encodeURIComponent(orderId)}/rating`,
@@ -352,6 +502,11 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no rated order.", 502);
   },
 
+  /**
+   * Method listPayments.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listPayments(orderId) {
     const response = await apiRequest(`/payments/orders/${encodeURIComponent(orderId)}`);
     if (!response.success) return response;
@@ -361,6 +516,13 @@ export const orderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned invalid payment obligations.", 502);
   },
 
+  /**
+   * Method submitPaymentReference.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} obligation - Input value used by the operation.
+   * @param {*} reference - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async submitPaymentReference(orderId, obligation, reference) {
     if (!["shop", "platform"].includes(obligation)) {
       return createErrorResponse("INVALID_OBLIGATION", "Unsupported payment obligation.", 422);
@@ -375,13 +537,26 @@ export const orderService = {
   },
 };
 
+/**
+ * Exports riderService.
+ * @type {*} Exported application value.
+*/
 export const riderService = {
+  /**
+   * Method getAvailability.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getAvailability() {
     const response = await apiRequest("/rider/availability");
     if (!response.success) return response;
     return createSuccessResponse({ isOnline: responseItem(response, "isOnline") });
   },
 
+  /**
+   * Method setAvailability.
+   * @param {*} isOnline - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async setAvailability(isOnline) {
     const response = await apiRequest("/rider/availability", {
       method: "PATCH",
@@ -391,6 +566,10 @@ export const riderService = {
     return createSuccessResponse({ isOnline: responseItem(response, "isOnline") });
   },
 
+  /**
+   * Method getAvailableOrders.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getAvailableOrders() {
     const response = await apiRequest("/rider/available-orders");
     if (!response.success) return response;
@@ -401,6 +580,10 @@ export const riderService = {
     return createSuccessResponse(orders.map(normalizeOrder));
   },
 
+  /**
+   * Method getActiveDelivery.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getActiveDelivery() {
     const response = await orderService.listOrders();
     if (!response.success) return response;
@@ -411,6 +594,11 @@ export const riderService = {
     return createSuccessResponse(active || null);
   },
 
+  /**
+   * Method claimOrder.
+   * @param {*} orderId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async claimOrder(orderId) {
     const response = await apiRequest("/rider/claim", {
       method: "POST",
@@ -423,6 +611,12 @@ export const riderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no claimed order.", 502);
   },
 
+  /**
+   * Method verifyPickup.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} pickupOtp - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async verifyPickup(orderId, pickupOtp) {
     const response = await apiRequest("/rider/verify-pickup", {
       method: "POST",
@@ -435,6 +629,12 @@ export const riderService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no verified order.", 502);
   },
 
+  /**
+   * Method verifyDelivery.
+   * @param {*} orderId - Input value used by the operation.
+   * @param {*} deliveryCode - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async verifyDelivery(orderId, deliveryCode) {
     const response = await apiRequest("/rider/verify-delivery", {
       method: "POST",
@@ -448,7 +648,15 @@ export const riderService = {
   },
 };
 
+/**
+ * Exports profileService.
+ * @type {*} Exported application value.
+*/
 export const profileService = {
+  /**
+   * Method getMyProfile.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getMyProfile() {
     const response = await apiRequest("/profile/me");
     return response.success
@@ -456,6 +664,11 @@ export const profileService = {
       : response;
   },
 
+  /**
+   * Method updateMyProfile.
+   * @param {*} fields - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async updateMyProfile(fields) {
     const response = await apiRequest("/profile/me", {
       method: "PATCH",
@@ -467,7 +680,15 @@ export const profileService = {
   },
 };
 
+/**
+ * Exports walletService.
+ * @type {*} Exported application value.
+*/
 export const walletService = {
+  /**
+   * Method getMyWallet.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getMyWallet() {
     const response = await apiRequest("/wallet/me");
     return response.success
@@ -475,6 +696,11 @@ export const walletService = {
       : response;
   },
 
+  /**
+   * Method listMyLedger.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listMyLedger({ page = 1, limit = 20 } = {}) {
     const response = await apiRequest(`/wallet/me/ledger?page=${page}&limit=${limit}`);
     return response.success
@@ -482,6 +708,11 @@ export const walletService = {
       : response;
   },
 
+  /**
+   * Method listMyPayouts.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listMyPayouts({ page = 1, limit = 20 } = {}) {
     const response = await apiRequest(`/wallet/me/payouts?page=${page}&limit=${limit}`);
     return response.success
@@ -489,6 +720,12 @@ export const walletService = {
       : response;
   },
 
+  /**
+   * Method requestRiderPayout.
+   * @param {*} amountPaisa - Input value used by the operation.
+   * @param {*} idempotencyKey - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async requestRiderPayout(amountPaisa, idempotencyKey) {
     return apiRequest("/wallet/me/payouts", {
       method: "POST",
@@ -498,7 +735,15 @@ export const walletService = {
   },
 };
 
+/**
+ * Exports notificationService.
+ * @type {*} Exported application value.
+*/
 export const notificationService = {
+  /**
+   * Method listNotifications.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listNotifications() {
     const response = await apiRequest("/notifications");
     if (!response.success) return response;
@@ -515,18 +760,37 @@ export const notificationService = {
     );
   },
 
+  /**
+   * Method markRead.
+   * @param {*} notificationId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async markRead(notificationId) {
     return apiRequest(`/notifications/${encodeURIComponent(notificationId)}/read`, {
       method: "PATCH",
     });
   },
 
+  /**
+   * Method markAllRead.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async markAllRead() {
     return apiRequest("/notifications/read-all", { method: "PATCH" });
   },
 };
 
+/**
+ * Exports adminService.
+ * @type {*} Exported application value.
+*/
 export const adminService = {
+  /**
+   * Method listPayouts.
+   * @param {*} status - Input value used by the operation.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listPayouts(status = "requested", { page = 1, limit = 20 } = {}) {
     const query = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (status) query.set("status", status);
@@ -538,6 +802,13 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid payout list.", 502);
   },
 
+  /**
+   * Method transitionPayout.
+   * @param {*} payoutId - Input value used by the operation.
+   * @param {*} action - Input value used by the operation.
+   * @param {*} payload - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async transitionPayout(payoutId, action, payload = {}) {
     return apiRequest(`/admin/payouts/${encodeURIComponent(payoutId)}/${action}`, {
       method: "POST",
@@ -545,6 +816,12 @@ export const adminService = {
     });
   },
 
+  /**
+   * Method listAuditLogs.
+   * @param {*} filters - Input value used by the operation.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listAuditLogs(filters = {}, { page = 1, limit = 20 } = {}) {
     const query = new URLSearchParams({ page: String(page), limit: String(limit) });
     for (const [key, value] of Object.entries(filters)) {
@@ -558,6 +835,12 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid audit log list.", 502);
   },
 
+  /**
+   * Method listPayments.
+   * @param {*} status - Input value used by the operation.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listPayments(status = "pending_verification", { page = 1, limit = 20 } = {}) {
     const query = new URLSearchParams({
       page: String(page),
@@ -575,12 +858,23 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned an invalid payment list.", 502);
   },
 
+  /**
+   * Method verifyPayment.
+   * @param {*} paymentId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async verifyPayment(paymentId) {
     return apiRequest(`/payments/${encodeURIComponent(paymentId)}/verify`, {
       method: "POST",
     });
   },
 
+  /**
+   * Method rejectPayment.
+   * @param {*} paymentId - Input value used by the operation.
+   * @param {*} reason - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async rejectPayment(paymentId, reason) {
     return apiRequest(`/payments/${encodeURIComponent(paymentId)}/reject`, {
       method: "POST",
@@ -588,6 +882,10 @@ export const adminService = {
     });
   },
 
+  /**
+   * Method getPaymentSettings.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getPaymentSettings() {
     const response = await apiRequest("/admin/payment-settings");
     if (!response.success) return response;
@@ -597,6 +895,11 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no platform payment settings.", 502);
   },
 
+  /**
+   * Method updatePaymentSettings.
+   * @param {*} bkashPlatformNumber - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async updatePaymentSettings(bkashPlatformNumber) {
     const response = await apiRequest("/admin/payment-settings", {
       method: "PUT",
@@ -609,6 +912,10 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated platform payment settings.", 502);
   },
 
+  /**
+   * Method getDashboardKPIs.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getDashboardKPIs() {
     const response = await apiRequest("/admin/overview");
     if (!response.success) return response;
@@ -626,6 +933,13 @@ export const adminService = {
     });
   },
 
+  /**
+   * Method listUsers.
+   * @param {*} role - Input value used by the operation.
+   * @param {*} limit - Input value used by the operation.
+   * @param {*} search - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async listUsers(role = "all", { page = 1, limit = 25, search = "" } = {}) {
     const query = new URLSearchParams({
       page: String(page),
@@ -642,6 +956,13 @@ export const adminService = {
     return createSuccessResponse(users, responseItem(response, "meta"));
   },
 
+  /**
+   * Method toggleUserSuspension.
+   * @param {*} userId - Input value used by the operation.
+   * @param {*} isSuspended - Input value used by the operation.
+   * @param {*} reason - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async toggleUserSuspension(userId, isSuspended, reason = "") {
     const response = await apiRequest(
       `/admin/users/${encodeURIComponent(userId)}`,
@@ -657,6 +978,11 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no updated user.", 502);
   },
 
+  /**
+   * Method getShopApplications.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getShopApplications({ page = 1, limit = 20 } = {}) {
     const response = await apiRequest(`/admin/shops?page=${page}&limit=${limit}`);
     if (!response.success) return response;
@@ -666,6 +992,13 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned invalid shop applications.", 502);
   },
 
+  /**
+   * Method reviewShopApplication.
+   * @param {*} applicationId - Input value used by the operation.
+   * @param {*} decision - Input value used by the operation.
+   * @param {*} reason - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async reviewShopApplication(applicationId, decision, reason = "") {
     const response = await apiRequest("/admin/shops/review", {
       method: "POST",
@@ -675,6 +1008,11 @@ export const adminService = {
     return createSuccessResponse(response.data);
   },
 
+  /**
+   * Method approveUser.
+   * @param {*} userId - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async approveUser(userId) {
     const response = await apiRequest(
       `/admin/users/${encodeURIComponent(userId)}`,
@@ -690,6 +1028,11 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned no approved user.", 502);
   },
 
+  /**
+   * Method getDisputes.
+   * @param {*} limit - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async getDisputes({ page = 1, limit = 20 } = {}) {
     const response = await apiRequest(`/admin/disputes?page=${page}&limit=${limit}`);
     if (!response.success) return response;
@@ -699,6 +1042,12 @@ export const adminService = {
       : createErrorResponse("INVALID_RESPONSE", "Backend returned invalid disputes.", 502);
   },
 
+  /**
+   * Method resolveDispute.
+   * @param {*} disputeId - Input value used by the operation.
+   * @param {*} decision - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   async resolveDispute(disputeId, decision) {
     const response = await apiRequest(
       `/admin/disputes/${encodeURIComponent(disputeId)}/resolve`,

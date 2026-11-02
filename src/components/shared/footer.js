@@ -2,6 +2,10 @@ import React from "react";
 import Link from "next/link";
 import { UtensilsCrossed, Shield, Heart, MapPin, Clock, Bike } from "lucide-react";
 
+/**
+ * Function Footer.
+ * @returns {*} The operation result.
+ */
 export function Footer() {
   return (
     <footer className="w-full border-t border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md mt-auto text-xs text-zinc-500 dark:text-zinc-400">

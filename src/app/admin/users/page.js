@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Function AdminUsersPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +68,10 @@ export default function AdminUsersPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  /**
+   * Arrow function handleToggleSuspension.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleToggleSuspension = async () => {
     if (!suspendingUser) return;
     const res = await adminService.toggleUserSuspension(
@@ -85,6 +93,11 @@ export default function AdminUsersPage() {
     }
   };
 
+  /**
+   * Arrow function handleApproveUser.
+   * @param {*} user - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleApproveUser = async (user) => {
     setApprovingUserId(user.id);
     const result =

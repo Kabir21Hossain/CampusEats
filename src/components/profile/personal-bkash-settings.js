@@ -8,6 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { profileService } from "@/services/index";
 
+/**
+ * Function PersonalBkashSettings.
+ * @returns {*} The operation result.
+ */
 export function PersonalBkashSettings() {
   const [bkashNumber, setBkashNumber] = useState("");
   const [loading, setLoading] = useState(true);
@@ -30,6 +34,11 @@ export function PersonalBkashSettings() {
     };
   }, []);
 
+  /**
+   * Arrow function handleSubmit.
+   * @param {*} event - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);

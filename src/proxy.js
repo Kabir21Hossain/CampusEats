@@ -12,6 +12,10 @@ export function proxy(request) {
 
 export default proxy;
 
+/**
+ * Exports config.
+ * @type {*} Exported application value.
+*/
 export const config = {
   matcher: [
     "/student/:path*",

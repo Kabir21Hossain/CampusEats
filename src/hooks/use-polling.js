@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 
+/**
+ * Function usePolling.
+ * @param {*} callback - Input value used by the operation.
+ * @param {*} intervalMs - Input value used by the operation.
+ * @returns {*} The operation result.
+ */
 export function usePolling(callback, intervalMs) {
   const callbackRef = useRef(callback);
 

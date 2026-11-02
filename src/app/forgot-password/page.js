@@ -8,6 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Mail } from "lucide-react";
 
+/**
+ * Function ForgotPasswordPage.
+ * @returns {*} The operation result.
+ */
 export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f8faf8] dark:bg-[#0d1511] text-[#18241c] dark:text-[#edf4ee]">

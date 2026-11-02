@@ -25,6 +25,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Function NavbarContent.
+ * @returns {*} The operation result.
+ */
 function NavbarContent() {
   const pathname = usePathname();
   const router = useRouter();
@@ -45,6 +49,10 @@ function NavbarContent() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   // Dynamic Navigation according to active role
+  /**
+   * Arrow function getNavLinks.
+   * @returns {*} The operation result.
+   */
   const getNavLinks = () => {
     if (role === ROLES.STUDENT) {
       return [
@@ -398,6 +406,10 @@ function NavbarContent() {
   );
 }
 
+/**
+ * Function Navbar.
+ * @returns {*} The operation result.
+ */
 export function Navbar() {
   return (
     <Suspense fallback={<div className="h-16 shrink-0" aria-hidden="true" />}>

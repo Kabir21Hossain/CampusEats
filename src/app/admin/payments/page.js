@@ -20,6 +20,10 @@ const PAYMENT_STATUSES = [
   ["all", "All"],
 ];
 
+/**
+ * Function AdminPaymentsPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [status, setStatus] = useState("pending_verification");
@@ -55,6 +59,11 @@ export default function AdminPaymentsPage() {
 
   usePolling(() => loadPayments(false), 10000);
 
+  /**
+   * Arrow function handleVerify.
+   * @param {*} payment - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleVerify = async (payment) => {
     setActionId(payment.id);
     const response = await adminService.verifyPayment(payment.id);
@@ -68,6 +77,11 @@ export default function AdminPaymentsPage() {
     await loadPayments(false);
   };
 
+  /**
+   * Arrow function handleReject.
+   * @param {*} payment - Input value used by the operation.
+   * @returns {Promise<*>} Resolves with the operation result.
+   */
   const handleReject = async (payment) => {
     const reason = String(rejectionReasons[payment.id] || "").trim();
     if (!reason) {

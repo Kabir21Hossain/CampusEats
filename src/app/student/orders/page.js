@@ -25,6 +25,10 @@ import {
 import { toast } from "sonner";
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics";
 
+/**
+ * Function StudentOrdersPage.
+ * @returns {*} The operation result.
+ */
 export default function StudentOrdersPage() {
   const { currentUser } = useAuth();
   const { addItem } = useCart();
@@ -84,6 +88,11 @@ export default function StudentOrdersPage() {
       ? cancelledOrders
       : orders;
 
+  /**
+   * Arrow function handleReorder.
+   * @param {*} order - Input value used by the operation.
+   * @returns {*} The operation result.
+   */
   const handleReorder = (order) => {
     order.items.forEach((item) => {
       addItem(

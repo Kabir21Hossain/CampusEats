@@ -19,6 +19,10 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+/**
+ * Function AdminOrdersPage.
+ * @returns {*} The operation result.
+ */
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
