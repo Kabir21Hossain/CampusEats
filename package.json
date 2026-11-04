@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --env-file=.env.local --test tests/auth.test.js tests/dashboard-analytics.test.js",
+    "test": "node --env-file=.env.local --test tests/auth.test.js tests/dashboard-analytics.test.js tests/store-registration/store-registration.test.js",
     "check:db": "node scripts/check-mongo.js"
   },
   "dependencies": {
