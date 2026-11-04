@@ -1,8 +1,7 @@
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { client } from "./mongodb.js";
-import { ROLES } from "./constants.js";
+import { validateStoreRegistration } from "./store-registration.js";
 
 const dbName = process.env.MONGODB_DB?.trim() || "campuseats";
 const db = client.db(dbName);
@@ -95,57 +94,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          user.email = user.email.trim().toLowerCase();
-          user.role = user.role || ROLES.STUDENT;
-          if (!Object.values(ROLES).includes(user.role)) {
-            throw new Error("Invalid account role");
-          }
-
-          if (!user.phone?.trim()) {
-            throw new APIError("BAD_REQUEST", {
-              message: "Phone number is required",
-            });
-          }
-
-          if (
-            user.role === ROLES.STUDENT &&
-            (!user.studentId?.trim() || !user.dormitoryAddress?.trim())
-          ) {
-            throw new APIError("BAD_REQUEST", {
-              message: "Student ID and dormitory details are required",
-            });
-          }
-
-          if (
-            user.role === ROLES.SHOP_OWNER &&
-            (!user.shopName?.trim() ||
-              !user.location?.trim() ||
-              !user.shopCategory?.trim())
-          ) {
-            throw new APIError("BAD_REQUEST", {
-              message: "Shop name, location, and category are required",
-            });
-          }
-
-          if (
-            user.role === ROLES.RIDER &&
-            (!["Bicycle", "Motorcycle"].includes(user.vehicleType) ||
-              !user.deliveryZones?.trim() ||
-              (user.vehicleType === "Motorcycle" && !user.licenseNumber?.trim()))
-          ) {
-            throw new APIError("BAD_REQUEST", {
-              message: "Rider vehicle and delivery details are required",
-            });
-          }
-
-          // Shop owners and riders require admin verification/approval
-          if (user.role === ROLES.SHOP_OWNER || user.role === ROLES.RIDER) {
-            user.verificationStatus = "pending";
-          } else {
-            user.verificationStatus = "verified";
-          }
-          user.isSuspended = false;
-          return { data: user };
+          return { data: validateStoreRegistration(user) };
         },
       },
     },
